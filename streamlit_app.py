@@ -20,7 +20,7 @@ st.markdown("""
 
 st.title("🍳 AI 쉐프의 레시피")
 
-# 2. 모델 설정 (사용자 요청에 따라 Gemini 2.0 Flash로 설정)
+# 2. 모델 설정 (Gemini 2.0 Flash)
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     safety = {
@@ -29,7 +29,6 @@ try:
         HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
     }
-    # 최신 모델인 2.0-flash를 사용하여 404 에러를 방지합니다.
     model = genai.GenerativeModel('gemini-2.0-flash', safety_settings=safety)
 except Exception as e:
     st.error(f"서버 연결 설정 중 오류: {e}"); st.stop()
@@ -38,12 +37,13 @@ except Exception as e:
 if "messages" not in st.session_state: st.session_state.messages = []
 if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
+if "finished" not in st.session_state: st.session_state.finished = False
 
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
-# 5. 방대한 메뉴 데이터
+# 5. 메뉴 데이터 (15개 카테고리)
 MENU_DATA = {
     "한식": ["김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", "찜닭", "소시지야채볶음", "두부조림", "멸치볶음", "진미채무침", "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"],
     "중식": ["짜장면", "짜장밥", "짬뽕", "짬뽕탕", "탕수육", "마파두부", "볶음밥", "계란볶음밥", "토마토달걀볶음", "고추잡채", "꽃빵튀김", "깐풍기", "유린기", "양장피", "팔보채", "누룽지탕", "군만두", "찐만두", "물만두", "난자완스", "건두부무침", "마라탕", "마라상궈", "꿔바로우", "깐쇼새우", "울면", "기스면", "잡탕밥", "잡채밥", "탄탄면"],
@@ -62,17 +62,32 @@ MENU_DATA = {
     "기타": "ETC_MODE"
 }
 
-# 6. 사용자 인터랙션 처리
+# 6. 사용자 인터랙션 로직
 st.write("---")
 user_q = None
 
-if st.session_state.show_retry:
+# '아니오'를 눌렀을 때의 문구 표시
+if st.session_state.finished:
+    st.balloons()
+    st.success("🌟 **미슐랭 3스타를 향해 나아갑시다!**")
+    if st.button("처음으로 돌아가기"):
+        st.session_state.finished = False
+        st.rerun()
+
+# '예/아니오' 질문창
+elif st.session_state.show_retry:
     st.markdown('<p class="status-text">🤔 더 물어볼 메뉴가 있나요?</p>', unsafe_allow_html=True)
     c1, c2, _ = st.columns([1, 1, 8])
     if c1.button("✅ 예", use_container_width=True):
-        st.session_state.show_retry = False; st.rerun()
+        st.session_state.show_retry = False
+        st.session_state.sel_cat = None # 카테고리 선택 초기화
+        st.rerun()
     if c2.button("❌ 아니오", use_container_width=True):
-        st.success("즐거운 식사 시간 되세요! 👋"); st.stop()
+        st.session_state.show_retry = False
+        st.session_state.finished = True # 종료 상태 활성화
+        st.rerun()
+
+# 메뉴 선택창 (카테고리 15개 버튼)
 else:
     st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
@@ -80,7 +95,7 @@ else:
         if m_cols[i % 5].button(cat, use_container_width=True, key=f"cat_{cat}"):
             st.session_state.sel_cat = cat
 
-    # 💡 '기타' 모드 로직 (타자 입력)
+    # '기타' 모드 로직
     if st.session_state.sel_cat == "기타":
         st.write("---")
         st.info("💡 **메뉴를 적어주세요.**")
@@ -88,7 +103,6 @@ else:
             etc_dish = st.text_input("궁금한 음식 이름을 입력하세요:")
             submit = st.form_submit_button("레시피 찾기")
             if submit and etc_dish:
-                # 💡 자동으로 "메뉴(적은 메뉴) 레시피 알려줘"로 변환
                 user_q = f"메뉴({etc_dish}) 레시피 알려줘"
                 st.session_state.sel_cat = None
 
@@ -105,7 +119,7 @@ else:
     prompt = st.chat_input("또는 음식 이름을 직접 입력하세요.")
     if prompt: user_q = prompt
 
-    # 7. 질문 처리 및 AI 답변 생성
+    # 7. AI 답변 생성
     if user_q:
         st.session_state.messages.append({"role": "user", "content": user_q})
         with st.chat_message("user"): st.markdown(user_q)
@@ -130,7 +144,6 @@ else:
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            # 💡 하루 사용량(20번)을 다 썼을 때 나타나는 커스텀 에러 메시지
             if "429" in str(e):
                 st.error("🚨 **하루 사용량을 다 쓰셨습니다!** 내일 다시 방문해 주세요.")
             else:
