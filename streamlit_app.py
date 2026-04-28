@@ -4,24 +4,33 @@ import google.generativeai as genai
 # 1. 페이지 설정
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
 
-# 💡 마법의 CSS: 모든 버튼의 테두리를 굵고 진하게 만듭니다.
+# 💡 CSS: 버튼 테두리 강조 및 가독성 향상
 st.markdown("""
     <style>
     div.stButton > button {
-        border: 2.5px solid #555555 !important; /* 테두리 굵기와 색상 */
-        border-radius: 8px !important;        /* 모서리 둥글기 */
-        font-weight: bold !important;         /* 글씨 굵게 */
+        border: 2.5px solid #333333 !important; 
+        border-radius: 10px !important;
+        font-weight: bold !important;
+        height: 3em !important;
         transition: all 0.2s ease-in-out;
     }
     div.stButton > button:hover {
-        border: 2.5px solid #FF4B4B !important; /* 마우스를 올렸을 때 색상 변화 */
+        border: 2.5px solid #FF4B4B !important;
         color: #FF4B4B !important;
+        background-color: #FFF5F5 !important;
+    }
+    /* 안내 문구 스타일 */
+    .recommend-text {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #FF4B4B;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🍳 AI 쉐프의 레시피")
-st.write("원하는 요리 종류를 선택하거나, 하단 채팅창에 궁금한 음식을 물어보세요!")
 
 # API 및 모델 세팅
 try:
@@ -46,43 +55,43 @@ if "messages" not in st.session_state:
 if "selected_category" not in st.session_state:
     st.session_state.selected_category = None 
 
-# 이전 대화 띄우기
+# =====================================================================
+# 💬 Part 1: 대화 기록 표시
+# =====================================================================
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+# =====================================================================
+# 🍱 Part 2: 하단 추천 메뉴판 (다른 메뉴들은 안 궁금하세요?)
+# =====================================================================
 st.write("---")
-st.write("#### 🍱 요리 카테고리 선택")
+st.markdown('<p class="recommend-text">🔍 다른 메뉴들은 안 궁금하세요?</p>', unsafe_allow_html=True)
 
-# 15개 메인 카테고리 버튼 배치
+# 15개 메인 카테고리 (동남아식 -> 아시아식 변경)
 categories = [
     "한식", "중식", "일식", "양식", "분식",
     "아시아식", "유럽식", "남미식", "채식", "건강식",
     "디저트/베이킹", "간편식", "음료", "주류", "기타"
 ]
-cols = st.columns(5)
+
+cat_cols = st.columns(5)
 user_input = None
 
 for i, category in enumerate(categories):
-    with cols[i % 5]:
-        if st.button(category, use_container_width=True):
+    with cat_cols[i % 5]:
+        if st.button(category, use_container_width=True, key=f"main_{category}"):
             if category == "한식":
                 st.session_state.selected_category = "한식"
-            elif category == "기타":
-                st.session_state.selected_category = None
-                user_input = "제가 가진 레시피 외에 새로운 요리를 찾고 싶어요! 어떤 음식을 도와드릴까요?"
             else:
                 st.session_state.selected_category = None
-                user_input = f"{category} 카테고리에서 가장 인기 있는 대표 레시피 3가지만 추천해 줘!"
+                user_input = f"{category} 스타일의 인기 있는 요리 레시피 하나 추천해 줘."
 
-# =====================================================================
-# 💡 한식 세부 메뉴 출력 로직 (설명, 소제목 다 빼고 요리 이름만!)
-# =====================================================================
+# 💡 한식 버튼 클릭 시 30가지 메뉴 펼치기
 if st.session_state.selected_category == "한식":
-    st.success("🥇 **한식 베스트 셀러 30가지입니다.** 드시고 싶은 메뉴를 선택해 주세요!")
-
-    # 깔끔하게 요리 이름만 모아둔 리스트
-    KOREAN_MENU_LIST = [
+    st.info("🥇 **한식 베스트 셀러 30가지입니다.**")
+    
+    korean_30 = [
         "김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", 
         "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", 
         "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", 
@@ -90,30 +99,36 @@ if st.session_state.selected_category == "한식":
         "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", 
         "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"
     ]
-
-    # 보기 좋게 5칸으로 나누어서 출력
+    
     sub_cols = st.columns(5)
-    for i, dish in enumerate(KOREAN_MENU_LIST):
+    for i, dish in enumerate(korean_30):
         with sub_cols[i % 5]:
-            if st.button(dish, key=f"kr_{dish}", use_container_width=True):
+            if st.button(dish, use_container_width=True, key=f"sub_{dish}"):
                 user_input = f"{dish} 레시피를 알려줘"
-                st.session_state.selected_category = None # 메뉴판 닫기
-# =====================================================================
+                st.session_state.selected_category = None
 
-# 채팅창 직접 입력 처리
-chat_input = st.chat_input("궁금한 음식 이름을 입력하세요 (예: 제육볶음 레시피)")
+# 채팅창 직접 입력
+chat_input = st.chat_input("또는 궁금한 음식 이름을 직접 입력하세요!")
 if chat_input:
     user_input = chat_input
     st.session_state.selected_category = None
 
-# 답변 생성 로직
+# =====================================================================
+# 🚀 Part 3: 답변 생성 및 화면 갱신
+# =====================================================================
 if user_input:
+    # 1. 사용자 메시지 추가 및 화면 표시
     st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.markdown(user_input)
-
-    # 셰프 페르소나 적용
-    chef_prompt = f"너는 친절하고 전문적인 'AI 쉐프'야. 사용자가 '{user_input}'에 대해 물어봤어. 맛있는 레시피를 필요한 재료와 단계별 조리 순서로 보기 좋게 정리해서 알려줘."
+    
+    # 2. 셰프 페르소나 설정 (매우 상세하고 친절한 답변 유도)
+    chef_prompt = f"""너는 세계 최고의 요리 실력을 가진 'AI 쉐프'야. 
+    사용자가 '{user_input}'의 레시피를 물어봤어. 
+    다음 규칙에 맞춰 답변해줘:
+    1. 인사는 "안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳"로 시작해.
+    2. 해당 요리에 대한 짧은 유래나 매력 포인트로 서론을 열어줘.
+    3. [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 구분해서 아주 상세하게 알려줘.
+    4. 조리 순서는 번호를 매겨서 설명해줘.
+    5. 답변의 톤은 매우 친절하고 따뜻하게 유지해줘."""
 
     history = []
     for m in st.session_state.messages[:-1]:
@@ -124,11 +139,15 @@ if user_input:
         chat = model.start_chat(history=history)
         response_stream = chat.send_message(chef_prompt, stream=True)
 
+        # 스트리밍 답변을 기록에 저장하기 위해 빈 메시지 추가
         with st.chat_message("assistant"):
             def stream_generator():
                 for chunk in response_stream:
                     if chunk.text: yield chunk.text
             response = st.write_stream(stream_generator())
+        
         st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun() # 대화 종료 후 화면을 갱신하여 메뉴판이 다시 아래에 오도록 함
+        
     except Exception as e:
         st.error(f"🚨 에러 발생: {e}")
