@@ -2,39 +2,31 @@ import streamlit as st
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
-# 1. 페이지 설정 및 제목
+# 1. 페이지 설정
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
 st.markdown("<style>div.stButton>button{border:3px solid #333!important;border-radius:12px!important;font-weight:bold!important;height:3.5em!important;transition:.2s;} div.stButton>button:hover{border-color:#FF4B4B!important;color:#FF4B4B!important;background:#FFF5F5!important;} .status-text{font-size:1.2rem;font-weight:bold;color:#FF4B4B;margin:1.5rem 0;}</style>", unsafe_allow_html=True)
 st.title("🍳 AI 쉐프의 레시피")
 
-# 2. API 설정 (가장 넉넉한 1.5-flash로 강제 고정)
+# 2. API 및 모델 설정
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    safety = { HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE }
     
-    # 💡 모든 필터 해제 (안전 문제로 대답 끊기는 것 방지)
-    safety = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    }
-    
-    # 💡 2.0이나 2.5 절대 안 쓰게 이름을 직접 박아버립니다. 
-    # (models/ 를 붙이지 않는 것이 요즘 라이브러리 방식입니다.)
+    # 429/404 에러 방지를 위해 1.5-flash 모델로 고정
     model = genai.GenerativeModel(model_name='gemini-1.5-flash', safety_settings=safety)
 except Exception as e:
     st.error(f"설정 에러: {e}"); st.stop()
 
-# 3. 세션 관리
+# 3. 세션 상태 관리
 if "messages" not in st.session_state: st.session_state.messages = []
 if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 
-# 4. 이전 대화 기록
+# 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
-# 5. 방대한 메뉴 데이터 (앞으로 여기 계속 추가하시면 됩니다!)
+# 5. 메뉴 데이터
 MENU_DATA = {
     "한식": ["김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", "찜닭", "소시지야채볶음", "두부조림", "멸치볶음", "진미채무침", "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"],
     "중식": ["짜장면", "짜장밥", "짬뽕", "짬뽕탕", "탕수육", "마파두부", "볶음밥", "계란볶음밥", "토마토달걀볶음", "고추잡채", "꽃빵튀김", "깐풍기", "유린기", "양장피", "팔보채", "누룽지탕", "군만두", "찐만두", "물만두", "난자완스", "건두부무침", "마라탕", "마라상궈", "꿔바로우", "깐쇼새우", "울면", "기스면", "잡탕밥", "잡채밥", "탄탄면"],
@@ -50,10 +42,10 @@ MENU_DATA = {
     "안주": ["골뱅이무침", "수박화채", "닭발", "오돌뼈", "똥집구이", "콘치즈", "조개탕", "홍합탕", "번데기탕", "어묵탕", "먹태구이", "육회", "낙지탕탕이", "두부김치", "계란말이", "바지락술찜", "숙주볶음", "훈제오리", "치즈플래터", "연어카나페", "닭꼬치", "염통꼬치", "타코와사비", "명란구이", "해물파전"],
     "음료": ["아메리카노", "라떼", "바닐라라떼", "카푸치노", "마끼아또", "카페모카", "콜드브루", "아인슈페너", "녹차라떼", "밀크티", "버블티", "딸기스무디", "망고스무디", "레모네이드", "자몽에이드", "진저에일", "아이스티", "딸기우유", "초코우유", "두유", "주스", "보리차", "유자차"],
     "주류": ["자몽하이볼", "레몬하이볼", "모히또", "피나콜라다", "상그리아", "뱅쇼", "막걸리", "소주", "맥주", "진토닉", "잭콕", "와인", "칵테일", "매실주", "복분자하이볼"],
-    "기타": ["메뉴를 직접 입력해 주세요!"]
+    "기타": "ETC_MODE" # 특수 모드 식별자
 }
 
-# 6. 하단 메뉴판 및 질문 처리
+# 6. 인터랙션 처리 로직
 st.write("---")
 user_q = None
 
@@ -63,28 +55,43 @@ if st.session_state.show_retry:
     if c1.button("✅ 예", use_container_width=True):
         st.session_state.show_retry = False; st.rerun()
     if c2.button("❌ 아니오", use_container_width=True):
-        st.success("맛있는 요리 하세요! 다음에 또 만나요. 👋"); st.stop()
+        st.success("맛있는 요리 하세요! 👋"); st.stop()
 else:
-    st.markdown('<p class="status-text">🔍 요리 종류를 선택해 주세요!</p>', unsafe_allow_html=True)
+    st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
     for i, cat in enumerate(MENU_DATA.keys()):
         if m_cols[i % 5].button(cat, use_container_width=True): st.session_state.sel_cat = cat
             
-    if st.session_state.sel_cat:
-        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
+    # 💡 '기타'를 눌렀을 때만 나타나는 전용 타자 입력칸
+    if st.session_state.sel_cat == "기타":
+        st.write("---")
+        st.info("💡 **메뉴를 적어주세요.**")
+        # 폼(form)을 사용해 엔터를 치거나 버튼을 눌렀을 때만 동작하게 설정
+        with st.form("etc_input_form", clear_on_submit=True):
+            etc_dish = st.text_input("궁금한 음식 이름을 입력하세요:", placeholder="예: 비프 부르기뇽, 마라탕 등")
+            submit = st.form_submit_button("레시피 찾기")
+            if submit and etc_dish:
+                user_q = f"메뉴({etc_dish}) 레시피 알려줘"
+                st.session_state.sel_cat = None # 입력 후 메뉴판 닫기
+
+    # 일반 카테고리 세부 메뉴판
+    elif st.session_state.sel_cat:
+        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판")
         s_cols = st.columns(5)
         for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_q = f"{dish} 레시피 알려줘"; st.session_state.sel_cat = None
 
-    prompt = st.chat_input("또는 음식 이름을 직접 입력하세요.")
+    # 하단 통합 채팅창 (항상 표시)
+    prompt = st.chat_input("음식 이름을 직접 입력하셔도 됩니다!")
     if prompt: user_q = prompt
 
+    # 7. AI 답변 생성 실행
     if user_q:
         st.session_state.messages.append({"role": "user", "content": user_q})
         with st.chat_message("user"): st.markdown(user_q)
         
-        sys_p = f"너는 친절하고 전문적인 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 상세히 정리해줘."
+        sys_p = f"너는 친절한 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
         hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
         
         try:
@@ -99,10 +106,9 @@ else:
                             placeholder.markdown(full_res)
                     except: continue
                 if not full_res:
-                    full_res = "죄송합니다. 이 메뉴에 대해서는 답변을 드릴 수 없습니다. 다른 메뉴를 물어봐 주세요!"
+                    full_res = "죄송합니다. 다른 메뉴를 물어봐 주세요!"
                     placeholder.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            # 💡 이제 여기서 '2.0 모델' 에러가 나면 1.5로 고정하라는 메시지를 띄웁니다.
-            st.error(f"🚨 일시적인 과부하입니다. 1분만 기다려주시거나, 페이지를 새로고침 해주세요. (에러: {e})")
+            st.error(f"🚨 일시적인 접속 장애가 발생했습니다. (에러: {e})")
