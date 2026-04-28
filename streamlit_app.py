@@ -3,42 +3,41 @@ import google.generativeai as genai
 
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
 
-# CSS: 버튼 디자인 및 레이아웃 최적화
+# CSS: 버튼 두께 및 레이아웃
 st.markdown("""
     <style>
     div.stButton > button {
-        border: 2px solid #333 !important;
-        border-radius: 8px !important;
+        border: 3px solid #333 !important;
+        border-radius: 12px !important;
         font-weight: bold !important;
-        transition: all 0.2s;
+        height: 3.5em !important;
+        transition: 0.2s;
     }
-    div.stButton > button:hover {
-        border-color: #FF4B4B !important; color: #FF4B4B !important;
-    }
-    .status-text { font-size: 1.1rem; font-weight: bold; color: #FF4B4B; margin: 1.5rem 0; }
+    div.stButton > button:hover { border-color: #FF4B4B !important; color: #FF4B4B !important; }
+    .status-text { font-size: 1.2rem; font-weight: bold; color: #FF4B4B; margin: 1.5rem 0; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🍳 AI 쉐프의 레시피")
 
-# API 설정 및 모델 연결 (404 방지용 설정)
+# 💡 모델 설정 (404 에러 방지를 위해 명칭 수정)
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # 모델 이름을 'gemini-1.5-flash'로 고정하여 인식률을 높입니다.
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # 'gemini-1.5-flash-latest'는 구글 API에서 가장 권장하는 최신 주소입니다.
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
 except Exception as e:
     st.error(f"설정 에러: {e}"); st.stop()
 
 # 세션 상태 관리
-if "messages" not in st.session_state: st.session_state.messages = []
-if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
-if "show_retry" not in st.session_state: st.session_state.show_retry = False
+for k in ["messages", "sel_cat", "show_retry"]:
+    if k not in st.session_state:
+        st.session_state[k] = [] if k == "messages" else (False if k == "show_retry" else None)
 
 # 대화 기록 표시
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
-# 메뉴 데이터 정의
+# 📖 방대한 메뉴 데이터
 MENU_DATA = {
     "한식": ["김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", "찜닭", "소시지야채볶음", "두부조림", "멸치볶음", "진미채무침", "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"],
     "중식": ["짜장면", "짜장밥", "짬뽕", "짬뽕탕", "탕수육", "마파두부", "볶음밥", "계란볶음밥", "토마토달걀볶음", "고추잡채", "꽃빵튀김", "깐풍기", "유린기", "양장피", "팔보채", "누룽지탕", "군만두", "찐만두", "물만두", "난자완스", "건두부무침", "마라탕", "마라상궈", "꿔바로우", "깐쇼새우", "울면", "기스면", "잡탕밥", "잡채밥", "탄탄면"],
@@ -57,41 +56,39 @@ MENU_DATA = {
     "기타": ["메뉴를 입력해주세요"]
 }
 
-# 하단 인터랙션 영역
+# 하단 인터랙션
 st.write("---")
+user_q = None
+
 if st.session_state.show_retry:
     st.markdown('<p class="status-text">🤔 더 물어볼 메뉴가 있나요?</p>', unsafe_allow_html=True)
     c1, c2, _ = st.columns([1, 1, 8])
     if c1.button("✅ 예", use_container_width=True):
         st.session_state.show_retry = False; st.rerun()
     if c2.button("❌ 아니오", use_container_width=True):
-        st.success("즐거운 식사 시간 되세요! 다음에 또 만나요. 👋"); st.stop()
+        st.success("즐거운 식사 되세요! 👋"); st.stop()
 else:
-    st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
+    st.markdown('<p class="status-text">🔍 요리 종류를 선택해 주세요!</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
-    user_q = None
     for i, cat in enumerate(MENU_DATA.keys()):
-        if m_cols[i % 5].button(cat, use_container_width=True, key=f"c_{cat}"):
+        if m_cols[i % 5].button(cat, use_container_width=True):
             st.session_state.sel_cat = cat
-
-    # 세부 메뉴판 출력
+            
     if st.session_state.sel_cat:
-        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴입니다. 레시피가 궁금한 음식을 눌러주세요.")
+        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
         s_cols = st.columns(5)
         for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
-                user_q = f"{dish} 레시피 알려줘"
-                st.session_state.sel_cat = None
+                user_q = f"{dish} 레시피 알려줘"; st.session_state.sel_cat = None
 
-    # 직접 입력 및 질문 처리
-    prompt = st.chat_input("음식 이름을 직접 입력하셔도 됩니다!")
+    prompt = st.chat_input("또는 음식 이름을 직접 입력하세요.")
     if prompt: user_q = prompt
 
     if user_q:
         st.session_state.messages.append({"role": "user", "content": user_q})
         with st.chat_message("user"): st.markdown(user_q)
         
-        sys_p = f"너는 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
+        sys_p = f"너는 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘. 마지막엔 '더 궁금한 게 있으면 물어봐줘!'라고 해줘."
         hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
         
         try:
@@ -101,4 +98,4 @@ else:
             st.session_state.messages.append({"role": "assistant", "content": ans})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            st.error(f"🚨 과부하 또는 오류 발생(1분만 기다려주세요): {e}")
+            st.error(f"🚨 현재 구글 서버에 접속자가 많습니다. 1분만 기다려주세요! (에러: {e})")
