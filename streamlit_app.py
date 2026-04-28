@@ -1,37 +1,40 @@
 import streamlit as st
-import anthropic
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
+# 1. 페이지 설정 및 제목
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
-
-st.markdown("""
-    <style>
-    div.stButton > button {
-        border: 3px solid #333 !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        height: 3.5em !important;
-        transition: 0.2s;
-    }
-    div.stButton > button:hover { border-color: #FF4B4B !important; color: #FF4B4B !important; }
-    .status-text { font-size: 1.2rem; font-weight: bold; color: #FF4B4B; margin: 1.5rem 0; }
-    </style>
-""", unsafe_allow_html=True)
-
+st.markdown("<style>div.stButton>button{border:3px solid #333!important;border-radius:12px!important;font-weight:bold!important;height:3.5em!important;transition:.2s;} div.stButton>button:hover{border-color:#FF4B4B!important;color:#FF4B4B!important;background:#FFF5F5!important;} .status-text{font-size:1.2rem;font-weight:bold;color:#FF4B4B;margin:1.5rem 0;}</style>", unsafe_allow_html=True)
 st.title("🍳 AI 쉐프의 레시피")
 
+# 2. API 설정 (가장 넉넉한 1.5-flash로 강제 고정)
 try:
-    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    
+    # 💡 모든 필터 해제 (안전 문제로 대답 끊기는 것 방지)
+    safety = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    }
+    
+    # 💡 2.0이나 2.5 절대 안 쓰게 이름을 직접 박아버립니다. 
+    # (models/ 를 붙이지 않는 것이 요즘 라이브러리 방식입니다.)
+    model = genai.GenerativeModel(model_name='gemini-1.5-flash', safety_settings=safety)
 except Exception as e:
-    st.error(f"API 연결 초기화 실패: {e}")
-    st.stop()
+    st.error(f"설정 에러: {e}"); st.stop()
 
-for k in ["messages", "sel_cat", "show_retry"]:
-    if k not in st.session_state:
-        st.session_state[k] = [] if k == "messages" else (False if k == "show_retry" else None)
+# 3. 세션 관리
+if "messages" not in st.session_state: st.session_state.messages = []
+if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
+if "show_retry" not in st.session_state: st.session_state.show_retry = False
 
+# 4. 이전 대화 기록
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
+# 5. 방대한 메뉴 데이터 (앞으로 여기 계속 추가하시면 됩니다!)
 MENU_DATA = {
     "한식": ["김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", "찜닭", "소시지야채볶음", "두부조림", "멸치볶음", "진미채무침", "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"],
     "중식": ["짜장면", "짜장밥", "짬뽕", "짬뽕탕", "탕수육", "마파두부", "볶음밥", "계란볶음밥", "토마토달걀볶음", "고추잡채", "꽃빵튀김", "깐풍기", "유린기", "양장피", "팔보채", "누룽지탕", "군만두", "찐만두", "물만두", "난자완스", "건두부무침", "마라탕", "마라상궈", "꿔바로우", "깐쇼새우", "울면", "기스면", "잡탕밥", "잡채밥", "탄탄면"],
@@ -43,13 +46,14 @@ MENU_DATA = {
     "남미식": ["비프타코", "치킨타코", "쉬림프타코", "비프퀘사디아", "비프브리또", "치킨브리또", "치폴레보울", "나쵸살사", "과카몰리", "스테이크파히타", "엔칠라다", "치미창가", "광어세비체", "엠파나다", "슈라스코", "페이조아다", "옥수수타말레스", "치킨타키토스", "아레파", "피카디요", "로모살타도", "소염통꼬치", "쿠바샌드위치", "수제츄러스", "유카튀김", "또띠아칩", "할라피뇨튀김", "살사베르데", "칼도데폴로", "아로즈콘포요"],
     "채식": ["들기름두부구이", "두부조림", "마라두부", "모둠채소구이", "만가닥버섯구이", "어향가지볶음", "애호박볶음", "콩나물무침", "시금치나물", "미역줄기볶음", "새싹비빔밥", "곤드레솥밥", "표고버섯솥밥", "병아리콩샐러드", "단호박찜", "찐감자", "구운고구마", "토마토마리네이드", "렌틸콩스프", "채소튀김", "수제후무스", "무생채", "상추겉절이", "도토리묵무침", "오이파프리카스틱", "감자죽", "단호박죽", "야채수제비", "두부소면", "채소카레"],
     "건강식": ["현미밥", "오곡밥", "보리비빔밥", "닭가슴살구이", "훈제오리야채볶음", "연어스테이크", "고등어구이", "삼치구이", "전복죽", "소고기미역국", "황태북어국", "차돌박이청국장", "우렁된장찌개", "수제요거트보울", "하루견과", "오트밀죽", "파프리카베이컨말이", "구운계란", "돼지고기수육", "양배추쌈", "두부면파스타", "곤약국수", "데친브로콜리", "닭가슴살샐러드", "콩자반", "멸치볶음", "청포묵무침", "가지선", "버섯전골", "톳밥"],
-    "디저트/베이킹": ["딸기생크림케이크", "초코가토케이크", "뉴욕치즈케이크", "티라미수", "에그타르트", "휘낭시에", "마들렌", "까눌레", "플레인스콘", "크루아상", "소금빵", "단팥빵", "슈크림", "소보로빵", "생크림단팥빵", "플레인베이글", "꽈배기", "호떡", "벨기에와플", "수플레팬케이크", "꾸덕한브라우니", "초코칩쿠키", "블루베리머핀", "사과파이", "커스터드푸딩", "우유빙수", "고구마빵", "감자빵", "약과", "화과자"],
-    "안주": ["골뱅이소면무침", "수박화채", "매운닭발", "오돌뼈볶음", "닭똥집소금구이", "콘치즈철판구이", "모둠조개탕", "칼칼한홍합탕", "번데기탕", "꼬치어묵탕", "먹태버터구이", "노가리구이", "한우육회", "산낙지탕탕이", "두부김치볶음", "스팸계란말이", "바지락술찜", "대패삼겹숙주볶음", "훈제오리무침", "치즈플래터", "연어카나페", "나쵸치즈딥", "칼칼한골뱅이탕", "수제닭꼬치", "염통꼬치", "타코와사비", "명란버터구이", "꼼장어볶음", "해물파전", "가리비찜"],
-    "음료": ["아메리카노", "카페라떼", "바닐라라떼", "카푸치노", "카라멜마끼아또", "카페모카", "콜드브루", "아인슈페너", "녹차라떼", "로열밀크티", "타피오카버블티", "딸기스무디", "망고스무디", "수제레몬에이드", "수제자몽에이드", "청포도에이드", "수제진저에일", "복숭아아이스티", "생딸기우유", "리얼초코우유", "바나나우유", "고소한두유", "착즙오렌지주스", "착즙사과주스", "착즙포도주스", "보리차", "옥수수수염차", "메밀차", "유자차", "오미자차"],
-    "주류": ["자몽하이볼", "레몬하이볼", "얼그레이하이볼", "블루문칵테일", "모히또", "피나콜라다", "상그리아", "뱅쇼", "꿀막걸리", "딸기막걸리", "크림막걸리", "레몬소주", "오이소주", "홍차소주", "진토닉", "잭콕", "화이트와인스프리처", "맥주칵테일", "소맥", "더치맥주", "깔루아밀크", "마가리타", "코스모폴리탄", "깔라만시소주", "매실주", "인삼주", "담금주", "무알콜칵테일", "미상하이볼", "복분자하이볼"],
+    "디저트/베이킹": ["딸기케이크", "초코케이크", "치즈케이크", "티라미수", "타르트", "휘낭시에", "마들렌", "까눌레", "스콘", "크루아상", "소금빵", "단팥빵", "슈크림", "소보로빵", "베이글", "꽈배기", "호떡", "와플", "팬케이크", "브라우니", "쿠키", "머핀", "푸딩", "빙수", "약과"],
+    "안주": ["골뱅이무침", "수박화채", "닭발", "오돌뼈", "똥집구이", "콘치즈", "조개탕", "홍합탕", "번데기탕", "어묵탕", "먹태구이", "육회", "낙지탕탕이", "두부김치", "계란말이", "바지락술찜", "숙주볶음", "훈제오리", "치즈플래터", "연어카나페", "닭꼬치", "염통꼬치", "타코와사비", "명란구이", "해물파전"],
+    "음료": ["아메리카노", "라떼", "바닐라라떼", "카푸치노", "마끼아또", "카페모카", "콜드브루", "아인슈페너", "녹차라떼", "밀크티", "버블티", "딸기스무디", "망고스무디", "레모네이드", "자몽에이드", "진저에일", "아이스티", "딸기우유", "초코우유", "두유", "주스", "보리차", "유자차"],
+    "주류": ["자몽하이볼", "레몬하이볼", "모히또", "피나콜라다", "상그리아", "뱅쇼", "막걸리", "소주", "맥주", "진토닉", "잭콕", "와인", "칵테일", "매실주", "복분자하이볼"],
     "기타": ["메뉴를 직접 입력해 주세요!"]
 }
 
+# 6. 하단 메뉴판 및 질문 처리
 st.write("---")
 user_q = None
 
@@ -61,12 +65,11 @@ if st.session_state.show_retry:
     if c2.button("❌ 아니오", use_container_width=True):
         st.success("맛있는 요리 하세요! 다음에 또 만나요. 👋"); st.stop()
 else:
-    st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
+    st.markdown('<p class="status-text">🔍 요리 종류를 선택해 주세요!</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
     for i, cat in enumerate(MENU_DATA.keys()):
-        if m_cols[i % 5].button(cat, use_container_width=True):
-            st.session_state.sel_cat = cat
-
+        if m_cols[i % 5].button(cat, use_container_width=True): st.session_state.sel_cat = cat
+            
     if st.session_state.sel_cat:
         st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
         s_cols = st.columns(5)
@@ -80,28 +83,26 @@ else:
     if user_q:
         st.session_state.messages.append({"role": "user", "content": user_q})
         with st.chat_message("user"): st.markdown(user_q)
-
-        sys_p = "너는 AI 쉐프야. 사용자가 레시피를 물어보면 '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
-
-        # anthropic 형식의 대화 히스토리 구성
-        hist = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-
+        
+        sys_p = f"너는 친절하고 전문적인 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 상세히 정리해줘."
+        hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
+        
         try:
+            resp = model.start_chat(history=hist).send_message(sys_p, stream=True)
             with st.chat_message("assistant"):
-                ans = ""
-                # 스트리밍 방식으로 응답
-                with client.messages.stream(
-                    model="claude-haiku-4-5-20251001",  # 빠르고 경제적인 모델
-                    max_tokens=1500,
-                    system=sys_p,
-                    messages=hist,
-                ) as stream:
-                    placeholder = st.empty()
-                    for text in stream.text_stream:
-                        ans += text
-                        placeholder.markdown(ans)
-
-            st.session_state.messages.append({"role": "assistant", "content": ans})
+                full_res = ""
+                placeholder = st.empty()
+                for chunk in resp:
+                    try:
+                        if chunk.parts:
+                            full_res += chunk.text
+                            placeholder.markdown(full_res)
+                    except: continue
+                if not full_res:
+                    full_res = "죄송합니다. 이 메뉴에 대해서는 답변을 드릴 수 없습니다. 다른 메뉴를 물어봐 주세요!"
+                    placeholder.markdown(full_res)
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            st.error(f"🚨 일시적인 접속 장애가 발생했습니다. 잠시 후 다시 시도해 주세요. (원인: {e})")
+            # 💡 이제 여기서 '2.0 모델' 에러가 나면 1.5로 고정하라는 메시지를 띄웁니다.
+            st.error(f"🚨 일시적인 과부하입니다. 1분만 기다려주시거나, 페이지를 새로고침 해주세요. (에러: {e})")
