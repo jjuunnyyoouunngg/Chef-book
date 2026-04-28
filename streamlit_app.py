@@ -20,13 +20,22 @@ st.markdown("""
 
 st.title("🍳 AI 쉐프의 레시피")
 
-# 💡 모델 설정 (404 에러 방지를 위해 명칭 수정)
+# 💡 404 에러 원천 봉쇄: 사용 가능한 모델 이름을 구글 서버에 직접 물어봅니다.
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # 'gemini-1.5-flash-latest'는 구글 API에서 가장 권장하는 최신 주소입니다.
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    
+    # 1. 내 API 키로 쓸 수 있는 모든 모델 목록을 가져옵니다.
+    all_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    
+    # 2. 목록 중에서 'flash'라는 글자가 들어간 최신 모델을 우선 선택합니다.
+    # 만약 flash가 없으면 목록의 첫 번째 모델을 사용합니다.
+    target = next((m for m in all_models if "flash" in m), all_models[0])
+    
+    # 3. 가져온 이름(models/gemini-...)을 그대로 사용하여 모델을 생성합니다.
+    model = genai.GenerativeModel(target)
 except Exception as e:
-    st.error(f"설정 에러: {e}"); st.stop()
+    st.error(f"API 연결 초기화 실패: {e}")
+    st.stop()
 
 # 세션 상태 관리
 for k in ["messages", "sel_cat", "show_retry"]:
@@ -37,7 +46,7 @@ for k in ["messages", "sel_cat", "show_retry"]:
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
-# 📖 방대한 메뉴 데이터
+# 📖 메뉴 데이터 (전체 데이터 유지)
 MENU_DATA = {
     "한식": ["김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", "찜닭", "소시지야채볶음", "두부조림", "멸치볶음", "진미채무침", "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"],
     "중식": ["짜장면", "짜장밥", "짬뽕", "짬뽕탕", "탕수육", "마파두부", "볶음밥", "계란볶음밥", "토마토달걀볶음", "고추잡채", "꽃빵튀김", "깐풍기", "유린기", "양장피", "팔보채", "누룽지탕", "군만두", "찐만두", "물만두", "난자완스", "건두부무침", "마라탕", "마라상궈", "꿔바로우", "깐쇼새우", "울면", "기스면", "잡탕밥", "잡채밥", "탄탄면"],
@@ -53,10 +62,10 @@ MENU_DATA = {
     "안주": ["골뱅이소면무침", "수박화채", "매운닭발", "오돌뼈볶음", "닭똥집소금구이", "콘치즈철판구이", "모둠조개탕", "칼칼한홍합탕", "번데기탕", "꼬치어묵탕", "먹태버터구이", "노가리구이", "한우육회", "산낙지탕탕이", "두부김치볶음", "스팸계란말이", "바지락술찜", "대패삼겹숙주볶음", "훈제오리무침", "치즈플래터", "연어카나페", "나쵸치즈딥", "칼칼한골뱅이탕", "수제닭꼬치", "염통꼬치", "타코와사비", "명란버터구이", "꼼장어볶음", "해물파전", "가리비찜"],
     "음료": ["아메리카노", "카페라떼", "바닐라라떼", "카푸치노", "카라멜마끼아또", "카페모카", "콜드브루", "아인슈페너", "녹차라떼", "로열밀크티", "타피오카버블티", "딸기스무디", "망고스무디", "수제레몬에이드", "수제자몽에이드", "청포도에이드", "수제진저에일", "복숭아아이스티", "생딸기우유", "리얼초코우유", "바나나우유", "고소한두유", "착즙오렌지주스", "착즙사과주스", "착즙포도주스", "보리차", "옥수수수염차", "메밀차", "유자차", "오미자차"],
     "주류": ["자몽하이볼", "레몬하이볼", "얼그레이하이볼", "블루문칵테일", "모히또", "피나콜라다", "상그리아", "뱅쇼", "꿀막걸리", "딸기막걸리", "크림막걸리", "레몬소주", "오이소주", "홍차소주", "진토닉", "잭콕", "화이트와인스프리처", "맥주칵테일", "소맥", "더치맥주", "깔루아밀크", "마가리타", "코스모폴리탄", "깔라만시소주", "매실주", "인삼주", "담금주", "무알콜칵테일", "미상하이볼", "복분자하이볼"],
-    "기타": ["메뉴를 입력해주세요"]
+    "기타": ["메뉴를 직접 입력해 주세요!"]
 }
 
-# 하단 인터랙션
+# 인터랙션 영역
 st.write("---")
 user_q = None
 
@@ -66,9 +75,9 @@ if st.session_state.show_retry:
     if c1.button("✅ 예", use_container_width=True):
         st.session_state.show_retry = False; st.rerun()
     if c2.button("❌ 아니오", use_container_width=True):
-        st.success("즐거운 식사 되세요! 👋"); st.stop()
+        st.success("맛있는 요리 하세요! 다음에 또 만나요. 👋"); st.stop()
 else:
-    st.markdown('<p class="status-text">🔍 요리 종류를 선택해 주세요!</p>', unsafe_allow_html=True)
+    st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
     for i, cat in enumerate(MENU_DATA.keys()):
         if m_cols[i % 5].button(cat, use_container_width=True):
@@ -88,14 +97,15 @@ else:
         st.session_state.messages.append({"role": "user", "content": user_q})
         with st.chat_message("user"): st.markdown(user_q)
         
-        sys_p = f"너는 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘. 마지막엔 '더 궁금한 게 있으면 물어봐줘!'라고 해줘."
+        sys_p = f"너는 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
         hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
         
         try:
+            # 실시간으로 탐색한 모델로 메시지 전송
             resp = model.start_chat(history=hist).send_message(sys_p, stream=True)
             with st.chat_message("assistant"):
                 ans = st.write_stream((c.text for c in resp if c.text))
             st.session_state.messages.append({"role": "assistant", "content": ans})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            st.error(f"🚨 현재 구글 서버에 접속자가 많습니다. 1분만 기다려주세요! (에러: {e})")
+            st.error(f"🚨 일시적인 접속 장애가 발생했습니다. 잠시 후 다시 시도해 주세요. (원인: {e})")
