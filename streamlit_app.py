@@ -7,7 +7,12 @@ st.title("🍳 AI 쉐프의 레시피")
 
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    # 💡 핵심 수정: 내 API 키로 쓸 수 있는 모델 중, '2.5(제한 빡센 버전)'가 아닌 'flash' 모델을 자동으로 낚아채옵니다.
+    avail = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    target = next((m for m in avail if "flash" in m and "2.5" not in m), avail[0])
+    
+    model = genai.GenerativeModel(target.replace("models/", ""))
 except Exception as e:
     st.error(f"API 에러: {e}")
     st.stop()
