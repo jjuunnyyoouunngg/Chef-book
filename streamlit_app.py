@@ -3,41 +3,25 @@ import google.generativeai as genai
 
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
 
-# CSS: 버튼 두께 및 레이아웃
-st.markdown("""
-    <style>
-    div.stButton > button {
-        border: 3px solid #333 !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        height: 3.5em !important;
-        transition: 0.2s;
-    }
-    div.stButton > button:hover { border-color: #FF4B4B !important; color: #FF4B4B !important; }
-    .status-text { font-size: 1.2rem; font-weight: bold; color: #FF4B4B; margin: 1.5rem 0; }
-    </style>
-""", unsafe_allow_html=True)
-
+# CSS: 버튼 디자인
+st.markdown("<style>div.stButton>button{border:3px solid #333!important;border-radius:12px!important;font-weight:bold!important;height:3.5em!important;transition:.2s;} div.stButton>button:hover{border-color:#FF4B4B!important;color:#FF4B4B!important;} .status-text{font-size:1.2rem;font-weight:bold;color:#FF4B4B;margin:1.5rem 0;}</style>", unsafe_allow_html=True)
 st.title("🍳 AI 쉐프의 레시피")
 
-# 💡 404 에러 원천 봉쇄: 사용 가능한 모델 이름을 구글 서버에 직접 물어봅니다.
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 1. 내 API 키로 쓸 수 있는 모든 모델 목록을 가져옵니다.
-    all_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    # 💡 핵심 수정: 2.5나 2.0 모델(하루 20회 제한)은 목록에서 아예 제외합니다.
+    # 오직 하루 1500회 무료인 1.5 모델 계열만 찾아냅니다.
+    all_m = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    safe_m = [m for m in all_m if "2.5" not in m and "2.0" not in m]
     
-    # 2. 목록 중에서 'flash'라는 글자가 들어간 최신 모델을 우선 선택합니다.
-    # 만약 flash가 없으면 목록의 첫 번째 모델을 사용합니다.
-    target = next((m for m in all_models if "flash" in m), all_models[0])
-    
-    # 3. 가져온 이름(models/gemini-...)을 그대로 사용하여 모델을 생성합니다.
+    # 1.5-flash를 우선 찾고, 없으면 안전한 모델 중 첫 번째를 씁니다.
+    target = next((m for m in safe_m if "1.5-flash" in m), safe_m[0])
     model = genai.GenerativeModel(target)
 except Exception as e:
-    st.error(f"API 연결 초기화 실패: {e}")
-    st.stop()
+    st.error(f"API 연결 에러: {e}"); st.stop()
 
-# 세션 상태 관리
+# 세션 상태 초기화
 for k in ["messages", "sel_cat", "show_retry"]:
     if k not in st.session_state:
         st.session_state[k] = [] if k == "messages" else (False if k == "show_retry" else None)
@@ -46,7 +30,7 @@ for k in ["messages", "sel_cat", "show_retry"]:
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
-# 📖 메뉴 데이터 (전체 데이터 유지)
+# 메뉴 데이터 (중략 없이 전체 포함)
 MENU_DATA = {
     "한식": ["김치찌개", "된장찌개", "미역국", "소고기무국", "콩나물국", "북어국/황태국", "순두부찌개", "청국장", "만둣국/떡국", "제육볶음", "소불고기", "닭볶음탕", "고등어조림", "갈치구이/조림", "오징어볶음", "찜닭", "소시지야채볶음", "두부조림", "멸치볶음", "진미채무침", "감자조림", "콩나물무침", "시금치나물", "메추리알/계란장조림", "애호박볶음", "오이무침", "비빔밥", "잡채", "계란말이", "김치전/부추전"],
     "중식": ["짜장면", "짜장밥", "짬뽕", "짬뽕탕", "탕수육", "마파두부", "볶음밥", "계란볶음밥", "토마토달걀볶음", "고추잡채", "꽃빵튀김", "깐풍기", "유린기", "양장피", "팔보채", "누룽지탕", "군만두", "찐만두", "물만두", "난자완스", "건두부무침", "마라탕", "마라상궈", "꿔바로우", "깐쇼새우", "울면", "기스면", "잡탕밥", "잡채밥", "탄탄면"],
@@ -65,7 +49,7 @@ MENU_DATA = {
     "기타": ["메뉴를 직접 입력해 주세요!"]
 }
 
-# 인터랙션 영역
+# 인터랙션
 st.write("---")
 user_q = None
 
@@ -75,22 +59,22 @@ if st.session_state.show_retry:
     if c1.button("✅ 예", use_container_width=True):
         st.session_state.show_retry = False; st.rerun()
     if c2.button("❌ 아니오", use_container_width=True):
-        st.success("맛있는 요리 하세요! 다음에 또 만나요. 👋"); st.stop()
+        st.success("맛있는 요리 하세요! 👋"); st.stop()
 else:
-    st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
+    st.markdown('<p class="status-text">🔍 어떤 음식을 도와드릴까요?</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
     for i, cat in enumerate(MENU_DATA.keys()):
         if m_cols[i % 5].button(cat, use_container_width=True):
             st.session_state.sel_cat = cat
             
     if st.session_state.sel_cat:
-        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
+        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판")
         s_cols = st.columns(5)
         for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_q = f"{dish} 레시피 알려줘"; st.session_state.sel_cat = None
 
-    prompt = st.chat_input("또는 음식 이름을 직접 입력하세요.")
+    prompt = st.chat_input("음식 이름을 입력하세요.")
     if prompt: user_q = prompt
 
     if user_q:
@@ -101,11 +85,10 @@ else:
         hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
         
         try:
-            # 실시간으로 탐색한 모델로 메시지 전송
             resp = model.start_chat(history=hist).send_message(sys_p, stream=True)
             with st.chat_message("assistant"):
                 ans = st.write_stream((c.text for c in resp if c.text))
             st.session_state.messages.append({"role": "assistant", "content": ans})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            st.error(f"🚨 일시적인 접속 장애가 발생했습니다. 잠시 후 다시 시도해 주세요. (원인: {e})")
+            st.error(f"🚨 일시적인 과부하입니다. 1분만 기다려주세요! ({e})")
