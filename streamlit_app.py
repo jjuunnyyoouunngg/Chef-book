@@ -20,7 +20,7 @@ st.markdown("""
 
 st.title("🍳 AI 쉐프의 레시피")
 
-# 2. 모델 설정 (404 에러 방지용 이중 안전장치)
+# 2. 모델 설정 (사용자 요청에 따라 Gemini 2.0 Flash로 설정)
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     safety = {
@@ -29,16 +29,10 @@ try:
         HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
     }
-    
-    # 404 에러 발생 시 다른 이름으로 시도하도록 설정
-    try:
-        model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety)
-    except:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest', safety_settings=safety)
-        
+    # 최신 모델인 2.0-flash를 사용하여 404 에러를 방지합니다.
+    model = genai.GenerativeModel('gemini-2.0-flash', safety_settings=safety)
 except Exception as e:
-    st.error(f"서버 연결 설정 중 오류가 발생했습니다: {e}")
-    st.stop()
+    st.error(f"서버 연결 설정 중 오류: {e}"); st.stop()
 
 # 3. 세션 상태 관리
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -78,7 +72,7 @@ if st.session_state.show_retry:
     if c1.button("✅ 예", use_container_width=True):
         st.session_state.show_retry = False; st.rerun()
     if c2.button("❌ 아니오", use_container_width=True):
-        st.success("즐거운 식사 되세요! 다음에 또 만나요. 👋"); st.stop()
+        st.success("즐거운 식사 시간 되세요! 👋"); st.stop()
 else:
     st.markdown('<p class="status-text">🔍 어떤 종류의 음식을 찾으시나요?</p>', unsafe_allow_html=True)
     m_cols = st.columns(5)
@@ -86,18 +80,19 @@ else:
         if m_cols[i % 5].button(cat, use_container_width=True, key=f"cat_{cat}"):
             st.session_state.sel_cat = cat
 
-    # 💡 '기타' 모드 로직: 타자 입력칸 활성화
+    # 💡 '기타' 모드 로직 (타자 입력)
     if st.session_state.sel_cat == "기타":
         st.write("---")
         st.info("💡 **메뉴를 적어주세요.**")
-        with st.form("etc_input_form"):
+        with st.form("etc_input_form", clear_on_submit=True):
             etc_dish = st.text_input("궁금한 음식 이름을 입력하세요:")
             submit = st.form_submit_button("레시피 찾기")
             if submit and etc_dish:
+                # 💡 자동으로 "메뉴(적은 메뉴) 레시피 알려줘"로 변환
                 user_q = f"메뉴({etc_dish}) 레시피 알려줘"
                 st.session_state.sel_cat = None
 
-    # 카테고리별 세부 메뉴 버튼들
+    # 세부 메뉴 버튼들
     elif st.session_state.sel_cat:
         st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판")
         s_cols = st.columns(5)
@@ -115,7 +110,7 @@ else:
         st.session_state.messages.append({"role": "user", "content": user_q})
         with st.chat_message("user"): st.markdown(user_q)
         
-        sys_p = f"너는 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘. 마지막엔 '더 물어볼 메뉴가 있나요?'라고 물어봐."
+        sys_p = f"너는 AI 쉐프야. 사용자가 '{user_q}'를 물어봤어. '안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳'로 시작하고, [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
         hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
         
         try:
@@ -135,4 +130,8 @@ else:
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             st.session_state.show_retry = True; st.rerun()
         except Exception as e:
-            st.error(f"🚨 일시적인 접속 장애가 발생했습니다. 1분만 기다려주세요! (에러: {e})")
+            # 💡 하루 사용량(20번)을 다 썼을 때 나타나는 커스텀 에러 메시지
+            if "429" in str(e):
+                st.error("🚨 **하루 사용량을 다 쓰셨습니다!** 내일 다시 방문해 주세요.")
+            else:
+                st.error(f"🚨 오류가 발생했습니다: {e}")
