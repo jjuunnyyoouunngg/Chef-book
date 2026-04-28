@@ -34,7 +34,7 @@ genai.configure(api_key=gemini_api_key)
 
 try:
     available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    target_model = next((m for m in available_models if "flash" in m), available_models[0])
+    target_model = next((m for m in available_models if "1.5-flash" in m), available_models[0])
     model = genai.GenerativeModel(target_model)
 except Exception as e:
     st.error(f"API 연결 에러: {e}")
@@ -58,7 +58,7 @@ st.write("#### 🍱 요리 카테고리 선택")
 categories = [
     "한식", "중식", "일식", "양식", "분식",
     "아시아식", "유럽식", "남미식", "채식", "건강식",
-    "디저트/베이킹", "간편식", "음료", "주류", "기타"
+    "디저트/베이킹", "안", "음료", "주류", "기타"
 ]
 cols = st.columns(5)
 user_input = None
