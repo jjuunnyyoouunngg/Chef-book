@@ -8,11 +8,11 @@ st.title("🍳 AI 쉐프의 레시피")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 💡 2.0이나 2.5 같은 제한 심한 최신 모델 대신, 
-    # 가장 안정적이고 무료 할당량이 많은 1.5-flash로 강제 지정합니다.
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    # 💡 404 에러 해결을 위해 가장 인식률이 높은 이름으로 변경합니다.
+    # 만약 'gemini-1.5-flash'가 또 안 되면 'gemini-pro'로 바꿔서 저장해 보세요.
+    model = genai.GenerativeModel('gemini-1.5-flash') 
 except Exception as e:
-    st.error(f"API 에러: {e}")
+    st.error(f"API 세팅 에러: {e}")
     st.stop()
 
 # 세션 상태 초기화
@@ -37,7 +37,7 @@ user_input = None
 for i, c in enumerate(cats):
     if cols[i%5].button(c, use_container_width=True, key=f"m_{c}"):
         st.session_state.selected_category = c if c == "한식" else None
-        user_input = "새로운 요리를 찾고 싶어요!" if c == "기타" else f"{c} 대표 레시피 하나 추천해 줘." if c != "한식" else None
+        user_input = "새로운 요리를 찾고 싶어요!" if c == "기타" else f"{c} 스타일 인기 요리 하나 추천해 줘." if c != "한식" else None
 
 if st.session_state.selected_category == "한식":
     st.info("🥇 **한식 베스트 셀러 30가지**")
@@ -63,4 +63,8 @@ if user_input:
         st.session_state.messages.append({"role": "assistant", "content": ans})
         st.rerun()
     except Exception as e:
-        st.error(f"🚨 일시적인 과부하입니다. 1분만 기다려주세요! 에러내용: {e}")
+        # 429 에러(한도 초과)가 났을 때만 한국어로 친절하게 안내합니다.
+        if "429" in str(e):
+            st.error("🚨 지금 사용자가 너무 많아 구글 서버가 바빠요! 1분만 쉬었다가 다시 눌러주세요.")
+        else:
+            st.error(f"🚨 에러가 발생했습니다: {e}")
