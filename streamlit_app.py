@@ -8,19 +8,19 @@ st.title("🍳 AI 쉐프의 레시피")
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 💡 핵심 수정: 내 API 키로 쓸 수 있는 모델 중, '2.5(제한 빡센 버전)'가 아닌 'flash' 모델을 자동으로 낚아채옵니다.
-    avail = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    target = next((m for m in avail if "flash" in m and "2.5" not in m), avail[0])
-    
-    model = genai.GenerativeModel(target.replace("models/", ""))
+    # 💡 2.0이나 2.5 같은 제한 심한 최신 모델 대신, 
+    # 가장 안정적이고 무료 할당량이 많은 1.5-flash로 강제 지정합니다.
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 except Exception as e:
     st.error(f"API 에러: {e}")
     st.stop()
 
+# 세션 상태 초기화
 for k in ["messages", "selected_category"]:
     if k not in st.session_state:
         st.session_state[k] = [] if k == "messages" else None
 
+# 대화 기록 표시
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
@@ -63,4 +63,4 @@ if user_input:
         st.session_state.messages.append({"role": "assistant", "content": ans})
         st.rerun()
     except Exception as e:
-        st.error(f"에러: {e}")
+        st.error(f"🚨 일시적인 과부하입니다. 1분만 기다려주세요! 에러내용: {e}")
