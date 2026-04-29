@@ -946,7 +946,6 @@ if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
-# 💡 최고 성능 모델 -> 다음 성능 모델 순으로 배치
 MODELS_TO_TRY = ['gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
 
 def get_ai_response(prompt_text):
@@ -960,29 +959,25 @@ def get_ai_response(prompt_text):
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
     }
     
-    # 💡 작성하신 리스트 순서대로 하나씩 시도하는 핵심 루프
     for model_name in MODELS_TO_TRY:
         try:
             model = genai.GenerativeModel(model_name=model_name, safety_settings=safety)
             
-            # API 규칙 준수: 방금 입력된 질문은 history에서 제외
             history = [
                 {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
                 for m in st.session_state.messages[:-1]
             ]
             
             chat = model.start_chat(history=history)
-            
-            # 여기서 성공하면 즉시 스트림을 반환하고 함수 종료 (다음 모델로 안 넘어감)
             return chat.send_message(prompt_text, stream=True)
             
         except Exception as e: 
-            # 사용량 초과(429) 등의 에러 발생 시, 터미널에 로그만 남기고 다음 모델로 넘어감(continue)
-            print(f"[{model_name}] 모델 사용 불가 (다음 모델로 넘어갑니다) : {e}")
+            # 🚨 핵심 수정: 터미널에만 숨어있던 에러를 웹 화면에 바로 노란색 경고창으로 띄웁니다!
+            st.warning(f"[{model_name}] 진짜 실패 원인: {e}")
             continue
             
-    # 준비된 모든 모델을 다 돌았는데도 return을 못 했다면 완전히 실패한 것
     return None
+    
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
