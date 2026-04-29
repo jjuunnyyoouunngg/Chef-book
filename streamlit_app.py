@@ -946,7 +946,8 @@ if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
-MODELS_TO_TRY = ['gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
+# 구버전 라이브러리에서도 확실하게 지원하는 기본 모델만 남김
+MODELS_TO_TRY = ['gemini-pro']
 
 def get_ai_response(prompt_text):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -972,7 +973,7 @@ def get_ai_response(prompt_text):
             return chat.send_message(prompt_text, stream=True)
             
         except Exception as e: 
-            # 🚨 핵심 수정: 터미널에만 숨어있던 에러를 웹 화면에 바로 노란색 경고창으로 띄웁니다!
+            # 에러 원인을 웹 화면에 바로 노란색 경고창으로 띄움
             st.warning(f"[{model_name}] 진짜 실패 원인: {e}")
             continue
             
