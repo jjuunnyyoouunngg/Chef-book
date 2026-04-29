@@ -946,12 +946,13 @@ if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
-MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+# 💡 최고 성능 모델 -> 다음 성능 모델 순으로 배치
+MODELS_TO_TRY = ['gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
 
 def get_ai_response(prompt_text):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 수정 내용: 무료 티어 권한 에러를 막기 위해 BLOCK_ONLY_HIGH로 변경
+    # 무료 API 권한 거절 방지용 완화 설정
     safety = {
         HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
         HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_ONLY_HIGH,
@@ -959,24 +960,28 @@ def get_ai_response(prompt_text):
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
     }
     
+    # 💡 작성하신 리스트 순서대로 하나씩 시도하는 핵심 루프
     for model_name in MODELS_TO_TRY:
         try:
             model = genai.GenerativeModel(model_name=model_name, safety_settings=safety)
             
-            # 수정 내용: 에러의 주원인! messages[:-1]을 추가해 방금 입력한 질문은 히스토리에서 뺌
+            # API 규칙 준수: 방금 입력된 질문은 history에서 제외
             history = [
                 {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
                 for m in st.session_state.messages[:-1]
             ]
             
             chat = model.start_chat(history=history)
+            
+            # 여기서 성공하면 즉시 스트림을 반환하고 함수 종료 (다음 모델로 안 넘어감)
             return chat.send_message(prompt_text, stream=True)
             
         except Exception as e: 
-            # 수정 내용: 에러 원인을 터미널에서 볼 수 있도록 출력
-            print(f"[{model_name}] 모델 에러: {e}")
+            # 사용량 초과(429) 등의 에러 발생 시, 터미널에 로그만 남기고 다음 모델로 넘어감(continue)
+            print(f"[{model_name}] 모델 사용 불가 (다음 모델로 넘어갑니다) : {e}")
             continue
             
+    # 준비된 모든 모델을 다 돌았는데도 return을 못 했다면 완전히 실패한 것
     return None
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
@@ -1061,6 +1066,6 @@ if user_input_recipe:
                 st.session_state.show_retry = True
                 st.rerun()
             else:
-                # 수정 내용: API가 거절했을 때, 세션에 이미 추가된 질문을 빼내어 다음번 질문이 꼬이지 않게 방지
-                st.session_state.messages.pop()
-                st.error("🚨 현재 레시피를 불러올 수 없습니다. 터미널(콘솔)의 에러 로그를 확인해 주세요.")
+                # 💡 모든 모델 폴백이 실패했을 때 사용자에게 보여줄 메시지 처리
+                st.session_state.messages.pop() # 에러 났으니 방금 들어간 질문은 세션에서 빼줌
+                st.error("🚨 앗! 오늘 준비된 AI 쉐프의 일일 사용량을 모두 소진했습니다! 내일 다시 찾아주세요. 👨‍🍳")
