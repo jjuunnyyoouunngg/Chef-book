@@ -950,22 +950,34 @@ MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemi
 
 def get_ai_response(prompt_text):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    
+    # 수정 내용: 무료 티어 권한 에러를 막기 위해 BLOCK_ONLY_HIGH로 변경
     safety = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
     }
+    
     for model_name in MODELS_TO_TRY:
         try:
             model = genai.GenerativeModel(model_name=model_name, safety_settings=safety)
-            history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
-                       for m in st.session_state.messages]
+            
+            # 수정 내용: 에러의 주원인! messages[:-1]을 추가해 방금 입력한 질문은 히스토리에서 뺌
+            history = [
+                {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
+                for m in st.session_state.messages[:-1]
+            ]
+            
             chat = model.start_chat(history=history)
             return chat.send_message(prompt_text, stream=True)
-        except: continue
+            
+        except Exception as e: 
+            # 수정 내용: 에러 원인을 터미널에서 볼 수 있도록 출력
+            print(f"[{model_name}] 모델 에러: {e}")
+            continue
+            
     return None
-
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -1040,7 +1052,7 @@ if user_input_recipe:
             full_res = ""
             chef_prompt = f"너는 세계 최고의 AI 쉐프야. 사용자가 '{user_input_recipe}'를 요청했어. 상세 레시피를 [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
             
-            stream = get_ai_response(chef_prompt)
+           stream = get_ai_response(chef_prompt)
             if stream:
                 for chunk in stream:
                     if chunk.text:
@@ -1050,4 +1062,6 @@ if user_input_recipe:
                 st.session_state.show_retry = True
                 st.rerun()
             else:
-                st.error("🚨 모든 AI 엔진의 사용량을 초과했습니다. 내일 다시 방문해 주세요.")
+                # 수정 내용: API가 거절했을 때, 세션에 이미 추가된 질문을 빼내어 다음번 질문이 꼬이지 않게 방지
+                st.session_state.messages.pop()
+                st.error("🚨 현재 레시피를 불러올 수 없습니다. 터미널(콘솔)의 에러 로그를 확인해 주세요.")
