@@ -56,6 +56,28 @@ st.markdown("""
 
 st.title("🍳 AI 쉐프의 레시피")
 
+import requests
+
+# --- 서버 위치 추적 코드 ---
+try:
+    # IP 기반으로 위치 정보를 알려주는 무료 API 호출
+    response = requests.get("http://ip-api.com/json/")
+    data = response.json()
+    
+    server_country = data.get("country", "알 수 없음")
+    server_city = data.get("city", "알 수 없음")
+    
+    st.info(f"📍 현재 이 앱이 실행 중인 서버 위치: **{server_country} ({server_city})**")
+    
+    if server_country in ["South Korea", "United States"]:
+        st.success("✅ 제미나이 무료 티어가 지원되는 국가입니다!")
+    else:
+        st.error("🚨 제미나이 무료 티어 미지원 국가일 확률이 높습니다 (Limit: 0 에러 원인)")
+        
+except Exception as e:
+    st.write("서버 위치를 확인할 수 없습니다.")
+# -------------------------
+
 # ---------------------------------------------------------------------
 # 📖 데이터 정의 구역 (NameError 방지를 위해 상단 배치)
 # ---------------------------------------------------------------------
