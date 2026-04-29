@@ -5,41 +5,10 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 # 1. 페이지 설정
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
 
-# CSS 설정: 버튼 두께 3px 및 디자인
+# 2. 통합 CSS 설정 (글자 크기, 간격, 버튼 스타일)
 st.markdown("""
     <style>
-    st.markdown("""
-    <style>
-    /* 기존 버튼 스타일 유지 */
-    div.stButton > button {
-        border: 3px solid #333 !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        height: 3.5em !important;
-        transition: 0.2s;
-    }
-    div.stButton > button:hover { border-color: #FF4B4B !important; color: #FF4B4B !important; background-color: #FFF5F5 !important; }
-
-    /* 💡 레시피 글씨 크기 및 간격 최적화 */
-    [data-testid="stChatMessageContent"] {
-        font-size: 1.15rem !important; /* 전체 글씨 크게 */
-        line-height: 1.7 !important;  /* 줄 간격 넓게 */
-    }
-
-    /* 💡 1. 2. 3. 리스트 사이의 간격을 벌림 */
-    [data-testid="stChatMessageContent"] li {
-        margin-bottom: 1.2rem !important; /* 단계별 하단 여백 추가 */
-    }
-
-    /* 💡 [필요한 재료] 같은 소제목 강조 */
-    [data-testid="stChatMessageContent"] strong {
-        font-size: 1.25rem !important;
-        color: #FF4B4B;
-    }
-    
-    .michelin-text { font-size: 2rem; font-weight: bold; color: #FF4B4B; text-align: center; padding: 2rem; }
-    </style>
-""", unsafe_allow_html=True)
+    /* 전체 버튼 디자인 (3px 두께) */
     div.stButton > button {
         border: 3px solid #333 !important;
         border-radius: 12px !important;
@@ -52,6 +21,29 @@ st.markdown("""
         color: #FF4B4B !important;
         background-color: #FFF5F5 !important;
     }
+
+    /* 💡 레시피 대화창 글씨 크기 확대 */
+    [data-testid="stChatMessageContent"] p {
+        font-size: 1.2rem !important;
+        line-height: 1.8 !important;
+        color: #333;
+    }
+
+    /* 💡 1. 2. 3. 번호 사이의 간격을 아주 넓게 벌림 */
+    [data-testid="stChatMessageContent"] li {
+        margin-bottom: 2rem !important; /* 번호 사이 간격 */
+        font-size: 1.2rem !important;
+    }
+
+    /* 💡 [필요한 재료] 등 강조 텍스트 색상 변경 */
+    [data-testid="stChatMessageContent"] strong {
+        font-size: 1.3rem !important;
+        color: #FF4B4B;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+
+    /* 미슐랭 응원 문구 스타일 */
     .michelin-text {
         font-size: 2rem;
         font-weight: bold;
@@ -61,6 +53,8 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+st.title("🍳 AI 쉐프의 레시피")
 
 st.title("🍳 AI 쉐프의 레시피")
 
