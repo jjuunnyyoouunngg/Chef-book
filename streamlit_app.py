@@ -8,6 +8,38 @@ st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout
 # CSS 설정: 버튼 두께 3px 및 디자인
 st.markdown("""
     <style>
+    st.markdown("""
+    <style>
+    /* 기존 버튼 스타일 유지 */
+    div.stButton > button {
+        border: 3px solid #333 !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        height: 3.5em !important;
+        transition: 0.2s;
+    }
+    div.stButton > button:hover { border-color: #FF4B4B !important; color: #FF4B4B !important; background-color: #FFF5F5 !important; }
+
+    /* 💡 레시피 글씨 크기 및 간격 최적화 */
+    [data-testid="stChatMessageContent"] {
+        font-size: 1.15rem !important; /* 전체 글씨 크게 */
+        line-height: 1.7 !important;  /* 줄 간격 넓게 */
+    }
+
+    /* 💡 1. 2. 3. 리스트 사이의 간격을 벌림 */
+    [data-testid="stChatMessageContent"] li {
+        margin-bottom: 1.2rem !important; /* 단계별 하단 여백 추가 */
+    }
+
+    /* 💡 [필요한 재료] 같은 소제목 강조 */
+    [data-testid="stChatMessageContent"] strong {
+        font-size: 1.25rem !important;
+        color: #FF4B4B;
+    }
+    
+    .michelin-text { font-size: 2rem; font-weight: bold; color: #FF4B4B; text-align: center; padding: 2rem; }
+    </style>
+""", unsafe_allow_html=True)
     div.stButton > button {
         border: 3px solid #333 !important;
         border-radius: 12px !important;
