@@ -1051,8 +1051,7 @@ if user_input_recipe:
             placeholder = st.empty()
             full_res = ""
             chef_prompt = f"너는 세계 최고의 AI 쉐프야. 사용자가 '{user_input_recipe}'를 요청했어. 상세 레시피를 [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
-            
-           stream = get_ai_response(chef_prompt)
+            stream = get_ai_response(chef_prompt)
             if stream:
                 for chunk in stream:
                     if chunk.text:
