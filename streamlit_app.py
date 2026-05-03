@@ -968,13 +968,40 @@ if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
-# 💡 뒤에 '-latest'를 붙여 명확한 모델 버전을 호출합니다.
 MODELS_TO_TRY = [
     'gemini-1.5-flash-latest', 
     'gemini-1.5-pro-latest',
     'gemini-1.5-flash',
     'gemini-1.5-pro'
-]
+] 
+
+def get_ai_response(prompt_text):
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    
+    safety = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    }
+    
+    for model_name in MODELS_TO_TRY:
+        try:
+            model = genai.GenerativeModel(model_name=model_name, safety_settings=safety)
+            
+            history = [
+                {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
+                for m in st.session_state.messages[:-1]
+            ]
+            
+            chat = model.start_chat(history=history)
+            return chat.send_message(prompt_text, stream=True)
+            
+        except Exception as e: 
+            st.warning(f"[{model_name}] 실패: {e}")
+            continue
+            
+    return None
     
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
