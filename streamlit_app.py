@@ -968,7 +968,8 @@ if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
-MODELS_TO_TRY = ['gemini-2.0-flash'] # 유일하게 통신에 성공한 최신 모델로 고정
+# 💡 2.0 대신 안정적인 1.5 모델을 1순위로 변경합니다.
+MODELS_TO_TRY = ['gemini-1.5-flash', 'gemini-1.5-pro'] 
 
 def get_ai_response(prompt_text):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -993,7 +994,7 @@ def get_ai_response(prompt_text):
             return chat.send_message(prompt_text, stream=True)
             
         except Exception as e: 
-            st.warning(f"[{model_name}] 진짜 실패 원인: {e}")
+            st.warning(f"[{model_name}] 실패: {e}")
             continue
             
     return None
