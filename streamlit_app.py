@@ -967,31 +967,51 @@ if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
-# 3. AI 모델 엔진 로직 (1.5 Flash 모델 고정)
+# 3. AI 모델 엔진 로직 (라이브러리 우회 - 직접 통신 방식)
 def get_ai_response(prompt_text):
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    api_key = st.secrets["GEMINI_API_KEY"]
+    # 구글 라이브러리를 거치지 않고, 1.5-flash 모델 주소로 직접 쏩니다!
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     
-    safety = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    # 이전 대화 기록 구성
+    contents = []
+    for m in st.session_state.messages[:-1]:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": m["content"]}]})
+        
+    # 이번 질문 추가
+    contents.append({"role": "user", "parts": [{"text": prompt_text}]})
+    
+    payload = {
+        "contents": contents,
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"}
+        ]
     }
     
     try:
-        # 💡 무조건 무료 티어가 넉넉하고 안정적인 1.5-flash 모델만 사용하도록 강제 고정합니다.
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash', safety_settings=safety)
+        import requests
+        response = requests.post(url, json=payload)
+        res_data = response.json()
         
-        history = [
-            {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
-            for m in st.session_state.messages[:-1]
-        ]
-        
-        chat = model.start_chat(history=history)
-        return chat.send_message(prompt_text, stream=True)
-        
+        if response.status_code == 200:
+            # 정상 응답 시 텍스트 추출
+            text = res_data['candidates'][0]['content']['parts'][0]['text']
+            
+            # 기존 화면 출력 코드(chunk.text)가 그대로 작동하도록 가짜 객체를 만들어 줍니다.
+            class FakeChunk:
+                def __init__(self, t):
+                    self.text = t
+            return [FakeChunk(text)]
+        else:
+            st.error(f"🚨 구글 서버에서 거절당했습니다 ({response.status_code}): {res_data}")
+            return None
+            
     except Exception as e: 
-        st.error(f"🚨 에러 발생: {e}")
+        st.error(f"🚨 통신 에러: {e}")
         return None
     
 # 4. 이전 대화 기록 표시
