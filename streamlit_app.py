@@ -967,14 +967,7 @@ if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
-# 3. AI 모델 엔진 로직 (Fallback)
-
-MODELS_TO_TRY = [
-    'models/gemini-1.5-flash', 
-    'models/gemini-1.5-pro',
-    'models/gemini-pro'
-]
-
+# 3. AI 모델 엔진 로직 (자동 탐색 및 연결)
 def get_ai_response(prompt_text):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
@@ -985,23 +978,45 @@ def get_ai_response(prompt_text):
         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_ONLY_HIGH,
     }
     
-    for model_name in MODELS_TO_TRY:
-        try:
-            model = genai.GenerativeModel(model_name=model_name, safety_settings=safety)
-            
-            history = [
-                {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
-                for m in st.session_state.messages[:-1]
-            ]
-            
-            chat = model.start_chat(history=history)
-            return chat.send_message(prompt_text, stream=True)
-            
-        except Exception as e: 
-            st.warning(f"[{model_name}] 실패: {e}")
-            continue
-            
-    return None
+    try:
+        # 1. 내 API 키로 쓸 수 있는 모든 모델 목록을 구글에서 직접 가져옵니다.
+        available_models = [
+            m.name for m in genai.list_models() 
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        
+        if not available_models:
+            st.error("🚨 사용 가능한 모델이 없습니다. 구글 AI Studio에서 발급받은 API 키가 맞는지 확인해주세요.")
+            return None
+
+        # 2. 우선적으로 사용할 모델(1.5 flash -> 1.5 pro -> 1.0 pro)을 자동으로 찾습니다.
+        target_model = None
+        for preferred in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro', 'gemini']:
+            for am in available_models:
+                if preferred in am:
+                    target_model = am
+                    break
+            if target_model:
+                break
+                
+        # 3. 선호 모델이 없으면 구글이 허락한 첫 번째 모델을 강제로 사용합니다.
+        if not target_model:
+            target_model = available_models[0]
+
+        # 4. 찾아낸 모델로 채팅을 시작합니다.
+        model = genai.GenerativeModel(model_name=target_model, safety_settings=safety)
+        
+        history = [
+            {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
+            for m in st.session_state.messages[:-1]
+        ]
+        
+        chat = model.start_chat(history=history)
+        return chat.send_message(prompt_text, stream=True)
+        
+    except Exception as e: 
+        st.error(f"🚨 치명적 오류 발생 (연결된 모델: {target_model}): {e}")
+        return None
     
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
