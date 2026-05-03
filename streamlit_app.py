@@ -969,10 +969,9 @@ if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
 MODELS_TO_TRY = [
-    'gemini-1.5-flash-latest', 
-    'gemini-1.5-pro-latest',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro'
+    'gemini-1.5-flash', 
+    'gemini-1.5-pro',
+    'gemini-pro' # 💡 구버전 라이브러리에서도 100% 인식하는 옛날 모델 추가
 ] 
 
 def get_ai_response(prompt_text):
