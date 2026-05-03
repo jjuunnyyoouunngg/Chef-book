@@ -968,11 +968,12 @@ if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 3. AI 모델 엔진 로직 (Fallback)
+
 MODELS_TO_TRY = [
-    'gemini-1.5-flash', 
-    'gemini-1.5-pro',
-    'gemini-pro' # 💡 구버전 라이브러리에서도 100% 인식하는 옛날 모델 추가
-] 
+    'models/gemini-1.5-flash', 
+    'models/gemini-1.5-pro',
+    'models/gemini-pro'
+]
 
 def get_ai_response(prompt_text):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
