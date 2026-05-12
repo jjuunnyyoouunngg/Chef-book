@@ -1172,9 +1172,9 @@ else:
         if st.session_state.rec_category == "상황":
             q1_text = "1. 이 상황에 피해야 하는 음식이 있나요? (예: 국수, 고기 등 / 없으면 비워두세요)"
         elif st.session_state.rec_category == "기분":
-            q1_text = "1. 오늘은 안 땡기는 음식이 있나요? (예: 국수, 고기 등 / 없으면 비워두세요)"
+            q1_text = "1. 오늘은 안 땡기는 음식이 있나요? (예: 밀가루, 생선 등 / 없으면 비워두세요)"
         else: # "시간"
-            q1_text = "1. 최근에 뭘 드셨어요? (예: 국수, 고기 등 / 없으면 비워두세요)"
+            q1_text = "1. 최근에 뭘 드셨어요? (예: 중식, 견과류 등 / 없으면 비워두세요)"
             
         with st.form("recent_food_form"):
             recent = st.text_input(q1_text)
@@ -1193,11 +1193,11 @@ else:
             
         # 💡 대분류에 따라 질문 텍스트 다르게 설정
         if st.session_state.rec_category == "상황":
-            q2_text = "2. 이 상황에 어울리지 않는 음식이 있나요? (예: 계란, 생선 등 / 없으면 비워두세요)"
+            q2_text = "2. 이 상황에 어울리지 않는 음식이 있나요? (예: 계란, 피자 등 / 없으면 비워두세요)"
         elif st.session_state.rec_category == "기분":
-            q2_text = "2. 먹으면 기분이 나빠질 음식이 있나요? (예: 계란, 생선 등 / 없으면 비워두세요)"
+            q2_text = "2. 먹으면 기분이 나빠질 음식이 있나요? (예: 우동, 치킨 등 / 없으면 비워두세요)"
         else: # "시간"
-            q2_text = "2. 알러지나 싫어하시는 음식 있으세요? (예: 계란, 생선 등 / 없으면 비워두세요)"
+            q2_text = "2. 알러지나 싫어하시는 음식 있으세요? (예: 삼각김밥, 라면 등 / 없으면 비워두세요)"
             
         with st.form("dislike_food_form"):
             dislike = st.text_input(q2_text)
