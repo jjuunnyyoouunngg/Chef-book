@@ -1164,21 +1164,43 @@ else:
             st.session_state.rec_step = 0
             st.rerun()
 
-    # [스텝 2] 최근 먹은 음식 입력
+    # [스텝 2] 첫 번째 제외 조건 입력 (카테고리별 맞춤 질문)
     elif st.session_state.rec_step == 2:
         st.info(f"선택하신 테마: **{st.session_state.rec_meal_type}**")
+        
+        # 💡 대분류에 따라 질문 텍스트 다르게 설정
+        if st.session_state.rec_category == "상황":
+            q1_text = "1. 이 상황에 피해야 하는 음식이 있나요? (예: 국수, 고기 등 / 없으면 비워두세요)"
+        elif st.session_state.rec_category == "기분":
+            q1_text = "1. 오늘은 안 땡기는 음식이 있나요? (예: 국수, 고기 등 / 없으면 비워두세요)"
+        else: # "시간"
+            q1_text = "1. 최근에 뭘 드셨어요? (예: 국수, 고기 등 / 없으면 비워두세요)"
+            
         with st.form("recent_food_form"):
-            recent = st.text_input("1. 1번째로 최근에 뭘 드셨어요? (예: 국수, 고기 등 / 없으면 비워두세요)")
+            recent = st.text_input(q1_text)
             if st.form_submit_button("다음 ➡️"):
                 st.session_state.recent_food = recent
                 st.session_state.rec_step = 3
                 st.rerun()
 
-    # [스텝 3] 알러지 / 싫어하는 음식 입력
+    # [스텝 3] 두 번째 제외 조건 입력 (카테고리별 맞춤 질문)
     elif st.session_state.rec_step == 3:
-        st.info(f"최근 드신 음식: **{st.session_state.recent_food if st.session_state.recent_food else '없음'}**")
+        # 입력한 텍스트 보여주기
+        if st.session_state.recent_food:
+            st.info(f"제외할 음식 1: **{st.session_state.recent_food}**")
+        else:
+            st.info("제외할 음식 1: **없음**")
+            
+        # 💡 대분류에 따라 질문 텍스트 다르게 설정
+        if st.session_state.rec_category == "상황":
+            q2_text = "2. 이 상황에 어울리지 않는 음식이 있나요? (예: 계란, 생선 등 / 없으면 비워두세요)"
+        elif st.session_state.rec_category == "기분":
+            q2_text = "2. 먹으면 기분이 나빠질 음식이 있나요? (예: 계란, 생선 등 / 없으면 비워두세요)"
+        else: # "시간"
+            q2_text = "2. 알러지나 싫어하시는 음식 있으세요? (예: 계란, 생선 등 / 없으면 비워두세요)"
+            
         with st.form("dislike_food_form"):
-            dislike = st.text_input("2. 2번째로 알러지나 싫어하시는 음식 있으세요? (예: 계란, 생선 등 / 없으면 비워두세요)")
+            dislike = st.text_input(q2_text)
             if st.form_submit_button("레시피 추천받기 ✨"):
                 st.session_state.disliked_food = dislike
                 st.session_state.rec_step = 4
