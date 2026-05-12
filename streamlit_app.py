@@ -1049,8 +1049,10 @@ if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
+# 💡 추천 필터링을 위한 상태 변수 추가
 if "rec_step" not in st.session_state: st.session_state.rec_step = 0
-if "rec_meal_type" not in st.session_state: st.session_state.rec_meal_type = ""
+if "rec_category" not in st.session_state: st.session_state.rec_category = "" # 대분류 저장
+if "rec_meal_type" not in st.session_state: st.session_state.rec_meal_type = "" # 소분류 저장
 if "recent_food" not in st.session_state: st.session_state.recent_food = ""
 if "disliked_food" not in st.session_state: st.session_state.disliked_food = ""
 if "is_recom" not in st.session_state: st.session_state.is_recom = False
@@ -1102,60 +1104,131 @@ else:
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_input_recipe = dish
 
-    # 💡 동그라미 친 위치에 들어가는 다단계 추천 코드!
+    # 💡 동그라미 친 위치에 들어가는 다단계 버튼 추천 코드!
     st.write("---")
     st.write("#### 🎲 메뉴를 추천해드릴까요?")
     
-    # [스텝 0] 처음 버튼 누르기 전
+    # [스텝 0] 대분류 선택 (버튼)
     if st.session_state.rec_step == 0:
-        rc1, rc2, rc3 = st.columns(3)
-        if rc1.button("🌅 아침", use_container_width=True):
-            st.session_state.rec_meal_type = "아침"
+        st.write("어떤 기준으로 추천해 드릴까요?")
+        c1, c2, c3 = st.columns(3)
+        if c1.button("🕒 시간", use_container_width=True):
+            st.session_state.rec_category = "시간"
             st.session_state.rec_step = 1
             st.rerun()
-        if rc2.button("🌞 점심", use_container_width=True):
-            st.session_state.rec_meal_type = "점심"
+        if c2.button("🌧️ 상황", use_container_width=True):
+            st.session_state.rec_category = "상황"
             st.session_state.rec_step = 1
             st.rerun()
-        if rc3.button("🌙 저녁", use_container_width=True):
-            st.session_state.rec_meal_type = "저녁"
+        if c3.button("😊 기분", use_container_width=True):
+            st.session_state.rec_category = "기분"
             st.session_state.rec_step = 1
             st.rerun()
 
-    # [스텝 1] 최근 먹은 음식 입력
+    # [스텝 1] 세부 분류 선택 (스텝 0의 버튼이 사라지고 바뀜!)
     elif st.session_state.rec_step == 1:
-        st.info(f"선택하신 시간대: **{st.session_state.rec_meal_type}**")
-        with st.form("recent_food_form"):
-            recent = st.text_input("1. 최근에 뭘 드셨어요? (예: 국수, 고기 등 / 없으면 비워두세요)")
-            if st.form_submit_button("다음 ➡️"):
-                st.session_state.recent_food = recent
+        st.info(f"선택하신 기준: **{st.session_state.rec_category}**")
+        st.write("세부 테마를 선택해 주세요.")
+        
+        if st.session_state.rec_category == "시간":
+            c1, c2, c3 = st.columns(3)
+            if c1.button("🌅 아침", use_container_width=True):
+                st.session_state.rec_meal_type = "아침"
                 st.session_state.rec_step = 2
                 st.rerun()
+            if c2.button("🌞 점심", use_container_width=True):
+                st.session_state.rec_meal_type = "점심"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c3.button("🌙 저녁", use_container_width=True):
+                st.session_state.rec_meal_type = "저녁"
+                st.session_state.rec_step = 2
+                st.rerun()
+                
+        elif st.session_state.rec_category == "상황":
+            c1, c2, c3, c4 = st.columns(4)
+            if c1.button("☔ 비오는 날", use_container_width=True):
+                st.session_state.rec_meal_type = "비오는 날"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c2.button("🥴 숙취 해장", use_container_width=True):
+                st.session_state.rec_meal_type = "해장"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c3.button("🥗 다이어트", use_container_width=True):
+                st.session_state.rec_meal_type = "다이어트"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c4.button("⏱️ 간단한 한끼", use_container_width=True):
+                st.session_state.rec_meal_type = "간단한 한끼"
+                st.session_state.rec_step = 2
+                st.rerun()
+                
+        elif st.session_state.rec_category == "기분":
+            c1, c2, c3, c4 = st.columns(4)
+            if c1.button("🔥 매운맛/스트레스", use_container_width=True):
+                st.session_state.rec_meal_type = "스트레스 해소"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c2.button("🧀 느끼/고소한 위로", use_container_width=True):
+                st.session_state.rec_meal_type = "위로가 필요해"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c3.button("💪 든든한 기력보충", use_container_width=True):
+                st.session_state.rec_meal_type = "기력 보충"
+                st.session_state.rec_step = 2
+                st.rerun()
+            if c4.button("🌱 산뜻한 리프레시", use_container_width=True):
+                st.session_state.rec_meal_type = "산뜻한 기분"
+                st.session_state.rec_step = 2
+                st.rerun()
+                
+        # 다시 고르고 싶을 때를 위한 뒤로가기 버튼
+        if st.button("⬅️ 처음부터 다시 고르기"):
+            st.session_state.rec_step = 0
+            st.rerun()
 
-    # [스텝 2] 알러지 / 싫어하는 음식 입력
+    # [스텝 2] 최근 먹은 음식 입력
     elif st.session_state.rec_step == 2:
-        st.info(f"최근 드신 음식: **{st.session_state.recent_food if st.session_state.recent_food else '없음'}**")
-        with st.form("dislike_food_form"):
-            dislike = st.text_input("2. 알러지나 싫어하시는 음식 있으세요? (예: 계란, 오이 등 / 없으면 비워두세요)")
-            if st.form_submit_button("레시피 추천받기 ✨"):
-                st.session_state.disliked_food = dislike
+        st.info(f"선택하신 테마: **{st.session_state.rec_meal_type}**")
+        with st.form("recent_food_form"):
+            recent = st.text_input("1. 1번째로 최근에 뭘 드셨어요? (예: 국수, 고기 등 / 없으면 비워두세요)")
+            if st.form_submit_button("다음 ➡️"):
+                st.session_state.recent_food = recent
                 st.session_state.rec_step = 3
                 st.rerun()
 
-    # [스텝 3] 필터링 후 랜덤 추천 출력
+    # [스텝 3] 알러지 / 싫어하는 음식 입력
     elif st.session_state.rec_step == 3:
-        # 시간대별 풀 설정
+        st.info(f"최근 드신 음식: **{st.session_state.recent_food if st.session_state.recent_food else '없음'}**")
+        with st.form("dislike_food_form"):
+            dislike = st.text_input("2. 2번째로 알러지나 싫어하시는 음식 있으세요? (예: 계란, 생선 등 / 없으면 비워두세요)")
+            if st.form_submit_button("레시피 추천받기 ✨"):
+                st.session_state.disliked_food = dislike
+                st.session_state.rec_step = 4
+                st.rerun()
+
+    # [스텝 4] 똑똑한 필터링 후 랜덤 추천 출력
+    elif st.session_state.rec_step == 4:
+        # 선택한 버튼에 맞게 풀(Pool) 연결
         if st.session_state.rec_meal_type == "아침": pool = BREAKFAST_POOL
         elif st.session_state.rec_meal_type == "점심": pool = LUNCH_POOL
-        else: pool = DINNER_POOL
+        elif st.session_state.rec_meal_type == "저녁": pool = DINNER_POOL
+        elif st.session_state.rec_meal_type == "비오는 날": pool = SITUATION_RAIN_POOL
+        elif st.session_state.rec_meal_type == "해장": pool = SITUATION_HANGOVER_POOL
+        elif st.session_state.rec_meal_type == "다이어트": pool = SITUATION_DIET_POOL
+        elif st.session_state.rec_meal_type == "간단한 한끼": pool = SITUATION_QUICK_POOL
+        elif st.session_state.rec_meal_type == "스트레스 해소": pool = MOOD_STRESS_POOL
+        elif st.session_state.rec_meal_type == "위로가 필요해": pool = MOOD_COMFORT_POOL
+        elif st.session_state.rec_meal_type == "기력 보충": pool = MOOD_ENERGY_POOL
+        elif st.session_state.rec_meal_type == "산뜻한 기분": pool = MOOD_FRESH_POOL
+        else: pool = LUNCH_POOL
         
         valid_pool = []
-        
-        # 💡 입력받은 단어를 쉼표나 띄어쓰기 기준으로 쪼개기
         recent_words = st.session_state.recent_food.replace(",", " ").split()
         dislike_words = st.session_state.disliked_food.replace(",", " ").split()
         
-        # 💡 카테고리 단어를 세부 재료로 확장 (생선 -> 고등어, 갈치 등)
+        # 확장 필터링 키워드
         expanded_dislikes = []
         for word in dislike_words:
             expanded_dislikes.append(word)
@@ -1171,32 +1244,27 @@ else:
             recipe_text = MANUAL_RECIPES[m]
             should_exclude = False
             
-            # 필터링 1: 최근 먹은 음식 단어 검사
             for rw in recent_words:
                 if rw in m or rw in recipe_text:
                     should_exclude = True
                     break
                     
-            # 필터링 2: 싫어하는 음식 확장 단어 검사
             if not should_exclude:
                 for dw in expanded_dislikes:
                     if dw in m or dw in recipe_text:
                         should_exclude = True
                         break
             
-            # 제외 조건에 하나라도 걸리면 스킵
-            if should_exclude:
-                continue
-                
-            valid_pool.append(m) # 통과한 메뉴만 합격 리스트에 추가
+            if should_exclude: continue
+            valid_pool.append(m)
             
-        # 추천할 메뉴가 남아있을 경우
         if valid_pool:
             user_input_recipe = random.choice(valid_pool)
-            st.session_state.is_recom = True  # 추천된 메뉴라는 표시 남기기
+            st.session_state.is_recom = True
             
-            # 완료되었으니 다음 추천을 위해 상태 초기화
+            # 다음 추천을 위해 모두 초기화
             st.session_state.rec_step = 0
+            st.session_state.rec_category = ""
             st.session_state.rec_meal_type = ""
             st.session_state.recent_food = ""
             st.session_state.disliked_food = ""
