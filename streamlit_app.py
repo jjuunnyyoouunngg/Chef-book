@@ -951,16 +951,6 @@ for msg in st.session_state.messages:
 # 5. 인터랙션 영역 제어
 user_input_recipe = None
 
-# ... (이하 동일) ...
-    
-# 4. 이전 대화 기록 표시
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# 5. 인터랙션 영역 제어
-user_input_recipe = None
-
 st.write("---")
 
 if st.session_state.finished_msg:
