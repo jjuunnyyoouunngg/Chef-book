@@ -1138,16 +1138,42 @@ else:
         else: pool = DINNER_POOL
         
         valid_pool = []
+        
+        # 💡 입력받은 단어를 쉼표나 띄어쓰기 기준으로 쪼개기
+        recent_words = st.session_state.recent_food.replace(",", " ").split()
+        dislike_words = st.session_state.disliked_food.replace(",", " ").split()
+        
+        # 💡 카테고리 단어를 세부 재료로 확장 (생선 -> 고등어, 갈치 등)
+        expanded_dislikes = []
+        for word in dislike_words:
+            expanded_dislikes.append(word)
+            if word in ["생선", "해산물", "해물", "해물류"]:
+                expanded_dislikes.extend(["고등어", "갈치", "연어", "삼치", "새우", "오징어", "바지락", "홍합", "명란", "낙지", "조개", "광어"])
+            elif word in ["고기", "육류"]:
+                expanded_dislikes.extend(["소고기", "돼지고기", "닭", "베이컨", "소시지", "스팸", "햄", "차돌박이", "우둔살", "사태"])
+            elif word in ["밀가루", "면"]:
+                expanded_dislikes.extend(["소면", "당면", "스파게티", "마카로니", "빵", "바게트", "또띠아", "중화면", "라면", "수제비"])
+        
         for m in pool:
             if m not in MANUAL_RECIPES: continue
             recipe_text = MANUAL_RECIPES[m]
+            should_exclude = False
             
-            # 필터링 1: 최근에 먹은 음식이 요리 이름이나 레시피에 있으면 제외!
-            if st.session_state.recent_food and (st.session_state.recent_food in m or st.session_state.recent_food in recipe_text):
-                continue
-                
-            # 필터링 2: 싫어하는 음식이 요리 이름이나 레시피에 있으면 제외!
-            if st.session_state.disliked_food and (st.session_state.disliked_food in m or st.session_state.disliked_food in recipe_text):
+            # 필터링 1: 최근 먹은 음식 단어 검사
+            for rw in recent_words:
+                if rw in m or rw in recipe_text:
+                    should_exclude = True
+                    break
+                    
+            # 필터링 2: 싫어하는 음식 확장 단어 검사
+            if not should_exclude:
+                for dw in expanded_dislikes:
+                    if dw in m or dw in recipe_text:
+                        should_exclude = True
+                        break
+            
+            # 제외 조건에 하나라도 걸리면 스킵
+            if should_exclude:
                 continue
                 
             valid_pool.append(m) # 통과한 메뉴만 합격 리스트에 추가
@@ -1155,7 +1181,7 @@ else:
         # 추천할 메뉴가 남아있을 경우
         if valid_pool:
             user_input_recipe = random.choice(valid_pool)
-            st.session_state.is_recom = True  # 💡 추천된 메뉴라는 표시 남기기!
+            st.session_state.is_recom = True  # 추천된 메뉴라는 표시 남기기
             
             # 완료되었으니 다음 추천을 위해 상태 초기화
             st.session_state.rec_step = 0
