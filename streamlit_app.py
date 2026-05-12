@@ -959,26 +959,9 @@ else:
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_input_recipe = dish
 
-    # 💡 사진에 동그라미 친 위치에 들어갈 코드입니다! (여기에 추가)
-    st.write("---")
-    st.write("#### 🎲 메뉴를 추천해드릴까요?")
-    rc1, rc2, rc3 = st.columns(3)
-    
-    if rc1.button("🌅 아침", use_container_width=True):
-        valid_pool = [m for m in BREAKFAST_POOL if m in MANUAL_RECIPES]
-        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
-        
-    if rc2.button("🌞 점심", use_container_width=True):
-        valid_pool = [m for m in LUNCH_POOL if m in MANUAL_RECIPES]
-        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
-        
-    if rc3.button("🌙 저녁", use_container_width=True):
-        valid_pool = [m for m in DINNER_POOL if m in MANUAL_RECIPES]
-        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
 
 # ---------------------------------------------------------------------
 # 6. 레시피 생성 및 출력 실행
-
 # ---------------------------------------------------------------------
 
 # 2. 세션 상태 관리
@@ -1033,6 +1016,42 @@ else:
         for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_input_recipe = dish
+
+else:
+    # 카테고리 선택 UI
+    st.write("#### 🍱 요리 종류를 선택해 주세요")
+    m_cols = st.columns(5)
+    categories = list(MENU_DATA.keys())
+    for i, cat in enumerate(categories):
+        if m_cols[i % 5].button(cat, use_container_width=True, key=f"c_{cat}"):
+            st.session_state.sel_cat = cat
+
+    if st.session_state.sel_cat:
+        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
+        s_cols = st.columns(5)
+        for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
+            if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
+                user_input_recipe = dish
+
+    # 💡 사진에 동그라미 친 위치에 들어갈 코드입니다! (여기에 추가)
+    st.write("---")
+    st.write("#### 🎲 메뉴를 추천해드릴까요?")
+    rc1, rc2, rc3 = st.columns(3)
+    
+    if rc1.button("🌅 아침", use_container_width=True):
+        valid_pool = [m for m in BREAKFAST_POOL if m in MANUAL_RECIPES]
+        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+        
+    if rc2.button("🌞 점심", use_container_width=True):
+        valid_pool = [m for m in LUNCH_POOL if m in MANUAL_RECIPES]
+        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+        
+    if rc3.button("🌙 저녁", use_container_width=True):
+        valid_pool = [m for m in DINNER_POOL if m in MANUAL_RECIPES]
+        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+
+# ---------------------------------------------------------------------
+# 6. 레시피 생성 및 출력 실행
 
 # ---------------------------------------------------------------------
 # 6. 레시피 생성 및 출력 실행
