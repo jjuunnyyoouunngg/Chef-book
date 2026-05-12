@@ -943,46 +943,23 @@ if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
     
-    # 이전 대화 기록 구성
-    contents = []
-    for m in st.session_state.messages[:-1]:
-        role = "user" if m["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": m["content"]}]})
-        
-    # 이번 질문 추가
-    contents.append({"role": "user", "parts": [{"text": prompt_text}]})
-    
-    payload = {
-        "contents": contents,
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"}
-        ]
-    }
-    
-    try:
-        import requests
-        response = requests.post(url, json=payload)
-        res_data = response.json()
-        
-        if response.status_code == 200:
-            # 정상 응답 시 텍스트 추출
-            text = res_data['candidates'][0]['content']['parts'][0]['text']
-            
-            # 기존 화면 출력 코드(chunk.text)가 그대로 작동하도록 가짜 객체를 만들어 줍니다.
-            class FakeChunk:
-                def __init__(self, t):
-                    self.text = t
-            return [FakeChunk(text)]
-        else:
-            st.error(f"🚨 구글 서버에서 거절당했습니다 ({response.status_code}): {res_data}")
-            return None
-            
-    except Exception as e: 
-        st.error(f"🚨 통신 에러: {e}")
-        return None
+# ---------------------------------------------------------------------
+
+# 2. 세션 상태 관리
+if "messages" not in st.session_state: st.session_state.messages = []
+if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
+if "show_retry" not in st.session_state: st.session_state.show_retry = False
+if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
+
+# 4. 이전 대화 기록 표시
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# 5. 인터랙션 영역 제어
+user_input_recipe = None
+
+# ... (이하 동일) ...
     
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
