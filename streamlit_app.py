@@ -940,27 +940,6 @@ BREAKFAST_POOL = ["계란말이", "계란토스트", "감자죽", "단호박죽"
 LUNCH_POOL = ["짜장면", "짬뽕", "비빔밥", "제육볶음", "김치볶음밥", "잔치국수", "등심돈카츠", "비빔국수", "치즈버거"]
 DINNER_POOL = ["소불고기", "닭볶음탕", "마라상궈", "티본스테이크", "감바스알아히요", "연어스테이크", "순대볶음", "고등어조림"]
 
-else:
-    # 카테고리 선택 UI
-    st.write("#### 🍱 요리 종류를 선택해 주세요")
-    m_cols = st.columns(5)
-    categories = list(MENU_DATA.keys())
-    for i, cat in enumerate(categories):
-        if m_cols[i % 5].button(cat, use_container_width=True, key=f"c_{cat}"):
-            st.session_state.sel_cat = cat
-
-    if st.session_state.sel_cat:
-        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
-        s_cols = st.columns(5)
-        for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
-            if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
-                user_input_recipe = dish
-
-
-# ---------------------------------------------------------------------
-# 6. 레시피 생성 및 출력 실행
-# ---------------------------------------------------------------------
-
 # 2. 세션 상태 관리
 if "messages" not in st.session_state: st.session_state.messages = []
 if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
