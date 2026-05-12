@@ -942,14 +942,6 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
-    
-# ---------------------------------------------------------------------
-
-# 2. 세션 상태 관리
-if "messages" not in st.session_state: st.session_state.messages = []
-if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
-if "show_retry" not in st.session_state: st.session_state.show_retry = False
-if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
@@ -974,6 +966,7 @@ st.write("---")
 if st.session_state.finished_msg:
     st.markdown('<div class="michelin-text">🌟 미슐랭 3스타를 향해 나아갑시다!</div>', unsafe_allow_html=True)
     if st.button("처음으로 돌아가기"):
+        st.session_state.messages = []
         st.session_state.finished_msg = False
         st.session_state.show_retry = False
         st.session_state.sel_cat = None
@@ -1010,6 +1003,7 @@ else:
 # 6. 레시피 생성 및 출력 실행 (AI 제거, 수동 데이터 전용)
 # ---------------------------------------------------------------------
 if user_input_recipe:
+    st.session_state.messages = []
     # 1. 사용자 질문 기록
     st.session_state.messages.append({"role": "user", "content": f"{user_input_recipe} 레시피 알려줘"})
     
