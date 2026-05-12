@@ -946,6 +946,11 @@ if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
 
+if "rec_step" not in st.session_state: st.session_state.rec_step = 0
+if "rec_meal_type" not in st.session_state: st.session_state.rec_meal_type = ""
+if "recent_food" not in st.session_state: st.session_state.recent_food = ""
+if "disliked_food" not in st.session_state: st.session_state.disliked_food = ""
+
 # 4. 이전 대화 기록 표시
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -993,22 +998,81 @@ else:
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_input_recipe = dish
 
-    # 💡 동그라미 친 위치에 들어가는 추천 코드 (여기에 딱 맞게 들어갑니다!)
+    # 💡 동그라미 친 위치에 들어가는 다단계 추천 코드!
     st.write("---")
     st.write("#### 🎲 메뉴를 추천해드릴까요?")
-    rc1, rc2, rc3 = st.columns(3)
     
-    if rc1.button("🌅 아침", use_container_width=True):
-        valid_pool = [m for m in BREAKFAST_POOL if m in MANUAL_RECIPES]
-        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+    # [스텝 0] 처음 버튼 누르기 전
+    if st.session_state.rec_step == 0:
+        rc1, rc2, rc3 = st.columns(3)
+        if rc1.button("🌅 아침", use_container_width=True):
+            st.session_state.rec_meal_type = "아침"
+            st.session_state.rec_step = 1
+            st.rerun()
+        if rc2.button("🌞 점심", use_container_width=True):
+            st.session_state.rec_meal_type = "점심"
+            st.session_state.rec_step = 1
+            st.rerun()
+        if rc3.button("🌙 저녁", use_container_width=True):
+            st.session_state.rec_meal_type = "저녁"
+            st.session_state.rec_step = 1
+            st.rerun()
+
+    # [스텝 1] 최근 먹은 음식 입력
+    elif st.session_state.rec_step == 1:
+        st.info(f"선택하신 시간대: **{st.session_state.rec_meal_type}**")
+        with st.form("recent_food_form"):
+            recent = st.text_input("1. 1번째로 최근에 뭘 드셨어요? (예: 국수, 고기 등 / 없으면 비워두세요)")
+            if st.form_submit_button("다음 ➡️"):
+                st.session_state.recent_food = recent
+                st.session_state.rec_step = 2
+                st.rerun()
+
+    # [스텝 2] 알러지 / 싫어하는 음식 입력
+    elif st.session_state.rec_step == 2:
+        st.info(f"최근 드신 음식: **{st.session_state.recent_food if st.session_state.recent_food else '없음'}**")
+        with st.form("dislike_food_form"):
+            dislike = st.text_input("2. 2번째로 알러지나 싫어하시는 음식 있으세요? (예: 계란, 오이 등 / 없으면 비워두세요)")
+            if st.form_submit_button("레시피 추천받기 ✨"):
+                st.session_state.disliked_food = dislike
+                st.session_state.rec_step = 3
+                st.rerun()
+
+    # [스텝 3] 필터링 후 랜덤 추천 출력
+    elif st.session_state.rec_step == 3:
+        # 시간대별 풀 설정
+        if st.session_state.rec_meal_type == "아침": pool = BREAKFAST_POOL
+        elif st.session_state.rec_meal_type == "점심": pool = LUNCH_POOL
+        else: pool = DINNER_POOL
         
-    if rc2.button("🌞 점심", use_container_width=True):
-        valid_pool = [m for m in LUNCH_POOL if m in MANUAL_RECIPES]
-        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
-        
-    if rc3.button("🌙 저녁", use_container_width=True):
-        valid_pool = [m for m in DINNER_POOL if m in MANUAL_RECIPES]
-        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+        valid_pool = []
+        for m in pool:
+            if m not in MANUAL_RECIPES: continue
+            recipe_text = MANUAL_RECIPES[m]
+            
+            # 필터링 1: 최근에 먹은 음식이 요리 이름이나 레시피에 있으면 제외!
+            if st.session_state.recent_food and (st.session_state.recent_food in m or st.session_state.recent_food in recipe_text):
+                continue
+                
+            # 필터링 2: 싫어하는 음식이 요리 이름이나 레시피에 있으면 제외!
+            if st.session_state.disliked_food and (st.session_state.disliked_food in m or st.session_state.disliked_food in recipe_text):
+                continue
+                
+            valid_pool.append(m) # 통과한 메뉴만 합격 리스트에 추가
+            
+        # 추천할 메뉴가 남아있을 경우
+        if valid_pool:
+            user_input_recipe = random.choice(valid_pool)
+            # 완료되었으니 다음 추천을 위해 상태 초기화
+            st.session_state.rec_step = 0
+            st.session_state.rec_meal_type = ""
+            st.session_state.recent_food = ""
+            st.session_state.disliked_food = ""
+        else:
+            st.warning("앗! 제외 조건을 모두 적용했더니 추천해 드릴 메뉴가 없어요 😭")
+            if st.button("다시 추천받기 🔄"):
+                st.session_state.rec_step = 0
+                st.rerun()
 
 # ---------------------------------------------------------------------
 # 6. 레시피 생성 및 출력 실행
