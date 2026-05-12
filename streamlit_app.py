@@ -1125,17 +1125,27 @@ else:
             st.session_state.rec_step = 1
             st.rerun()
 
-    # [스텝 1] 세부 분류 선택 (드롭다운 방식 도입!)
+    # [스텝 1] 세부 분류 선택 (드롭다운 박스로 53개 항목 깔끔하게 처리!)
     elif st.session_state.rec_step == 1:
         st.info(f"선택하신 기준: **{st.session_state.rec_category}**")
         st.write("세부 테마를 선택해 주세요.")
         
-        # 각 카테고리별 리스트 정의 (위에서 고른 30개를 여기에 넣으시면 됩니다)
-        time_list = ["🌅 아침", "🌞 점심", "🌙 저녁"]
-        situation_list = ["☔ 비 오는 날", "🥴 숙취 해장", "🥗 다이어트 / 식단 관리", "⏱️ 바쁜 아침 간단한 한 끼", "🎉 홈파티 / 손님 초대"] # ... 30개 입력
-        mood_list = ["🤯 스트레스 폭발 직전!", "😭 우울하고 지칠 때", "😆 완전 신나는 날", "🫂 따뜻한 위로가 필요해", "🌿 산뜻하게 리프레시!"] # ... 30개 입력
+        time_list = ["아침", "점심", "저녁"]
+        situation_list = [
+            "비 오는 날", "숙취 해장", "다이어트 식단", "바쁜 아침", "홈파티",
+            "혼술 안주", "영화·넷플릭스", "야식", "감기·몸살", "캠핑·피크닉",
+            "운동 후 단백질", "입맛 없을 때", "소화 안 될 때", "냉장고 털이", "자취생 생존요리",
+            "도시락 메뉴", "부모님 대접", "아이 간식", "추운 겨울날", "더운 여름날",
+            "월급날 플렉스", "기념일 음식", "브런치", "야근·밤샘", "시험기간",
+            "매운 음식 땡길 때", "단 음식 땡길 때", "채식 데이", "부드러운 음식", "가성비 음식"
+        ]
+        mood_list = [
+            "스트레스 폭발", "우울한 날", "신나는 날", "외로운 날", "화나는 날",
+            "위로가 필요한 날", "무기력한 날", "에너지 넘치는 날", "설레는 날", "졸린 오후",
+            "짜증나는 날", "꿀꿀한 기분", "공허한 기분", "새벽 감성", "텐션 올리고 싶은 날",
+            "포근한 기분", "성취감 느끼는 날", "로맨틱한 기분", "열정 넘치는 상태", "혼자 있고 싶은 날"
+        ]
         
-        # 폼(Form)을 사용해서 깔끔하게 묶어주기
         with st.form("theme_select_form"):
             if st.session_state.rec_category == "시간":
                 selected_theme = st.selectbox("시간대를 선택하세요", time_list)
@@ -1144,13 +1154,11 @@ else:
             elif st.session_state.rec_category == "기분":
                 selected_theme = st.selectbox("현재 기분을 선택하세요", mood_list)
                 
-            # 결정 버튼
             if st.form_submit_button("이 테마로 결정! ➡️"):
                 st.session_state.rec_meal_type = selected_theme
                 st.session_state.rec_step = 2
                 st.rerun()
                 
-        # 다시 고르고 싶을 때를 위한 뒤로가기 버튼
         if st.button("⬅️ 처음부터 다시 고르기"):
             st.session_state.rec_step = 0
             st.rerun()
@@ -1177,19 +1185,23 @@ else:
 
     # [스텝 4] 똑똑한 필터링 후 랜덤 추천 출력
     elif st.session_state.rec_step == 4:
-        # 선택한 버튼에 맞게 풀(Pool) 연결
-        if st.session_state.rec_meal_type == "아침": pool = BREAKFAST_POOL
-        elif st.session_state.rec_meal_type == "점심": pool = LUNCH_POOL
-        elif st.session_state.rec_meal_type == "저녁": pool = DINNER_POOL
-        elif st.session_state.rec_meal_type == "비오는 날": pool = SITUATION_RAIN_POOL
-        elif st.session_state.rec_meal_type == "해장": pool = SITUATION_HANGOVER_POOL
-        elif st.session_state.rec_meal_type == "다이어트": pool = SITUATION_DIET_POOL
-        elif st.session_state.rec_meal_type == "간단한 한끼": pool = SITUATION_QUICK_POOL
-        elif st.session_state.rec_meal_type == "스트레스 해소": pool = MOOD_STRESS_POOL
-        elif st.session_state.rec_meal_type == "위로가 필요해": pool = MOOD_COMFORT_POOL
-        elif st.session_state.rec_meal_type == "기력 보충": pool = MOOD_ENERGY_POOL
-        elif st.session_state.rec_meal_type == "산뜻한 기분": pool = MOOD_FRESH_POOL
-        else: pool = LUNCH_POOL
+        
+        # 💡 [핵심] 50개의 테마별 메뉴 풀(Pool)을 딕셔너리로 관리합니다.
+        # 나중에 여기에 테마별로 추천하고 싶은 메뉴들을 리스트로 채워넣으시면 됩니다!
+        THEME_POOLS = {
+            "아침": BREAKFAST_POOL,
+            "점심": LUNCH_POOL,
+            "저녁": DINNER_POOL,
+            "비 오는 날": ["해물파전", "김치전/부추전", "칼국수", "야채수제비", "짬뽕", "짬뽕탕", "고기우동", "조개탕", "홍합탕"],
+            "숙취 해장": ["콩나물국", "북어국/황태국", "순두부찌개", "황태북어국", "매운쌀국수", "짬뽕", "냄비라면"],
+            "다이어트 식단": ["닭가슴살샐러드", "병아리콩샐러드", "두부면파스타", "현미밥", "구운계란", "월남쌈", "연어스테이크", "수제요거트보울"],
+            "스트레스 폭발": ["고추장떡볶이", "마라탕", "마라상궈", "닭발", "오돌뼈", "매운어묵", "제육볶음", "사천탕수육", "낙지탕탕이"],
+            "위로가 필요한 날": ["까르보나라", "맥앤치즈", "치즈버거", "라자냐", "크림새우", "치즈퐁듀", "단호박죽", "몬테크리스토"]
+            # (계속해서 원하는 카테고리를 추가하실 수 있습니다!)
+        }
+        
+        # 선택한 테마가 THEME_POOLS에 있으면 그 리스트를 쓰고, 아직 메뉴를 안 채워넣은 테마라면 전체 메뉴(MANUAL_RECIPES)에서 랜덤으로 뽑습니다. (에러 방지용)
+        pool = THEME_POOLS.get(st.session_state.rec_meal_type, list(MANUAL_RECIPES.keys()))
         
         valid_pool = []
         recent_words = st.session_state.recent_food.replace(",", " ").split()
