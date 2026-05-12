@@ -1,4 +1,5 @@
 import streamlit as st
+import random
 
 # 1. 페이지 설정
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
@@ -933,7 +934,50 @@ MANUAL_RECIPES = {
     "튀김만두": "안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다. 👨‍🍳\n\n**[필요한 재료]**\n\n냉동 만두 5~6알, 식용유 넉넉히(팬 바닥에서 0.5cm 높이).\n\n**[조리 순서]**\n\n1. 냉동 만두는 조리 10분 전 실온에 두어 겉면의 성에를 제거하거나 키친타월로 물기를 닦습니다.\n\n2. 팬에 식용유를 넉넉히 두르고 중불에서 예열합니다.\n\n3. 기름이 달궈지면 만두를 올리고 한쪽 면이 노릇해질 때까지 2분간 둡니다.\n\n4. 만두를 뒤집어가며 모든 면이 황금색이 되고 만두피가 바삭해질 때까지 총 5~7분간 총 튀기듯 굽습니다.\n\n5. 키친타월을 깐 접시에 올려 기름기를 한 번 제거한 뒤 섭취합니다.\n\n**[AI 쉐프의 꿀팁]**\n\n만두 겉면에 물기가 있으면 기름이 심하게 튀어 위험하므로 반드시 물기를 닦고 조리하십시오.",
 }
 
+# ... (MANUAL_RECIPES 딕셔너리 끝부분) ...
+    "피치 크러쉬": "안녕하세요! 최고의 맛을 찾아드리는 AI 쉐프입니다... (생략)",
+} # <-- MANUAL_RECIPES 끝나는 곳
 
+# 💡 추천용 메뉴 풀 (여기에 추가하세요!)
+BREAKFAST_POOL = ["계란말이", "계란토스트", "감자죽", "단호박죽", "미역국", "순두부찌개", "수제요거트보울", "프렌치토스트"]
+LUNCH_POOL = ["짜장면", "짬뽕", "비빔밥", "제육볶음", "김치볶음밥", "잔치국수", "등심돈카츠", "비빔국수", "치즈버거"]
+DINNER_POOL = ["소불고기", "닭볶음탕", "마라상궈", "티본스테이크", "감바스알아히요", "연어스테이크", "순대볶음", "고등어조림"]
+
+else:
+    # 카테고리 선택 UI
+    st.write("#### 🍱 요리 종류를 선택해 주세요")
+    m_cols = st.columns(5)
+    categories = list(MENU_DATA.keys())
+    for i, cat in enumerate(categories):
+        if m_cols[i % 5].button(cat, use_container_width=True, key=f"c_{cat}"):
+            st.session_state.sel_cat = cat
+
+    if st.session_state.sel_cat:
+        st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
+        s_cols = st.columns(5)
+        for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
+            if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
+                user_input_recipe = dish
+
+    # 💡 사진에 동그라미 친 위치에 들어갈 코드입니다! (여기에 추가)
+    st.write("---")
+    st.write("#### 🎲 메뉴를 추천해드릴까요?")
+    rc1, rc2, rc3 = st.columns(3)
+    
+    if rc1.button("🌅 아침", use_container_width=True):
+        valid_pool = [m for m in BREAKFAST_POOL if m in MANUAL_RECIPES]
+        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+        
+    if rc2.button("🌞 점심", use_container_width=True):
+        valid_pool = [m for m in LUNCH_POOL if m in MANUAL_RECIPES]
+        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+        
+    if rc3.button("🌙 저녁", use_container_width=True):
+        valid_pool = [m for m in DINNER_POOL if m in MANUAL_RECIPES]
+        user_input_recipe = random.choice(valid_pool) if valid_pool else random.choice(list(MANUAL_RECIPES.keys()))
+
+# ---------------------------------------------------------------------
+# 6. 레시피 생성 및 출력 실행
 
 # ---------------------------------------------------------------------
 
