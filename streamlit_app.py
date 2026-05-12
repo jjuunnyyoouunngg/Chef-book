@@ -1125,61 +1125,28 @@ else:
             st.session_state.rec_step = 1
             st.rerun()
 
-    # [스텝 1] 세부 분류 선택 (스텝 0의 버튼이 사라지고 바뀜!)
+    # [스텝 1] 세부 분류 선택 (드롭다운 방식 도입!)
     elif st.session_state.rec_step == 1:
         st.info(f"선택하신 기준: **{st.session_state.rec_category}**")
         st.write("세부 테마를 선택해 주세요.")
         
-        if st.session_state.rec_category == "시간":
-            c1, c2, c3 = st.columns(3)
-            if c1.button("🌅 아침", use_container_width=True):
-                st.session_state.rec_meal_type = "아침"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c2.button("🌞 점심", use_container_width=True):
-                st.session_state.rec_meal_type = "점심"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c3.button("🌙 저녁", use_container_width=True):
-                st.session_state.rec_meal_type = "저녁"
-                st.session_state.rec_step = 2
-                st.rerun()
+        # 각 카테고리별 리스트 정의 (위에서 고른 30개를 여기에 넣으시면 됩니다)
+        time_list = ["🌅 아침", "🌞 점심", "🌙 저녁"]
+        situation_list = ["☔ 비 오는 날", "🥴 숙취 해장", "🥗 다이어트 / 식단 관리", "⏱️ 바쁜 아침 간단한 한 끼", "🎉 홈파티 / 손님 초대"] # ... 30개 입력
+        mood_list = ["🤯 스트레스 폭발 직전!", "😭 우울하고 지칠 때", "😆 완전 신나는 날", "🫂 따뜻한 위로가 필요해", "🌿 산뜻하게 리프레시!"] # ... 30개 입력
+        
+        # 폼(Form)을 사용해서 깔끔하게 묶어주기
+        with st.form("theme_select_form"):
+            if st.session_state.rec_category == "시간":
+                selected_theme = st.selectbox("시간대를 선택하세요", time_list)
+            elif st.session_state.rec_category == "상황":
+                selected_theme = st.selectbox("현재 상황을 선택하세요", situation_list)
+            elif st.session_state.rec_category == "기분":
+                selected_theme = st.selectbox("현재 기분을 선택하세요", mood_list)
                 
-        elif st.session_state.rec_category == "상황":
-            c1, c2, c3, c4 = st.columns(4)
-            if c1.button("☔ 비오는 날", use_container_width=True):
-                st.session_state.rec_meal_type = "비오는 날"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c2.button("🥴 숙취 해장", use_container_width=True):
-                st.session_state.rec_meal_type = "해장"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c3.button("🥗 다이어트", use_container_width=True):
-                st.session_state.rec_meal_type = "다이어트"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c4.button("⏱️ 간단한 한끼", use_container_width=True):
-                st.session_state.rec_meal_type = "간단한 한끼"
-                st.session_state.rec_step = 2
-                st.rerun()
-                
-        elif st.session_state.rec_category == "기분":
-            c1, c2, c3, c4 = st.columns(4)
-            if c1.button("🔥 매운맛/스트레스", use_container_width=True):
-                st.session_state.rec_meal_type = "스트레스 해소"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c2.button("🧀 느끼/고소한 위로", use_container_width=True):
-                st.session_state.rec_meal_type = "위로가 필요해"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c3.button("💪 든든한 기력보충", use_container_width=True):
-                st.session_state.rec_meal_type = "기력 보충"
-                st.session_state.rec_step = 2
-                st.rerun()
-            if c4.button("🌱 산뜻한 리프레시", use_container_width=True):
-                st.session_state.rec_meal_type = "산뜻한 기분"
+            # 결정 버튼
+            if st.form_submit_button("이 테마로 결정! ➡️"):
+                st.session_state.rec_meal_type = selected_theme
                 st.session_state.rec_step = 2
                 st.rerun()
                 
