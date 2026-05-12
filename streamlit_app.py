@@ -1,6 +1,4 @@
 import streamlit as st
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # 1. 페이지 설정
 st.set_page_config(page_title="AI 쉐프의 레시피", page_icon="🍳", layout="wide")
@@ -56,27 +54,6 @@ st.markdown("""
 
 st.title("🍳 AI 쉐프의 레시피")
 
-import requests
-
-# --- 서버 위치 추적 코드 ---
-try:
-    # IP 기반으로 위치 정보를 알려주는 무료 API 호출
-    response = requests.get("http://ip-api.com/json/")
-    data = response.json()
-    
-    server_country = data.get("country", "알 수 없음")
-    server_city = data.get("city", "알 수 없음")
-    
-    st.info(f"📍 현재 이 앱이 실행 중인 서버 위치: **{server_country} ({server_city})**")
-    
-    if server_country in ["South Korea", "United States"]:
-        st.success("✅ 제미나이 무료 티어가 지원되는 국가입니다!")
-    else:
-        st.error("🚨 제미나이 무료 티어 미지원 국가일 확률이 높습니다 (Limit: 0 에러 원인)")
-        
-except Exception as e:
-    st.write("서버 위치를 확인할 수 없습니다.")
-# -------------------------
 
 # ---------------------------------------------------------------------
 # 📖 데이터 정의 구역 (NameError 방지를 위해 상단 배치)
@@ -97,8 +74,7 @@ MENU_DATA = {
     "디저트/베이킹": ["딸기케이크", "초코케이크", "치즈케이크", "티라미수", "타르트", "휘낭시에", "마들렌", "까눌레", "스콘", "크루아상", "소금빵", "단팥빵", "슈크림", "소보로빵", "베이글", "꽈배기", "호떡", "와플", "팬케이크", "브라우니", "쿠키", "머핀", "푸딩", "빙수", "약과"],
     "안주": ["골뱅이무침", "수박화채", "닭발", "오돌뼈", "똥집구이", "콘치즈", "조개탕", "홍합탕", "번데기탕", "어묵탕", "먹태구이", "육회", "낙지탕탕이", "두부김치", "계란말이", "바지락술찜", "숙주볶음", "훈제오리", "치즈플래터", "연어카나페", "닭꼬치", "염통꼬치", "타코와사비", "명란구이", "해물파전"],
     "음료": ["아메리카노", "라떼", "바닐라라떼", "카푸치노", "마끼아또", "카페모카", "콜드브루", "아인슈페너", "녹차라떼", "밀크티", "버블티", "딸기스무디", "망고스무디", "레모네이드", "자몽에이드", "진저에일", "아이스티", "딸기우유", "초코우유", "두유", "주스", "보리차", "유자차", "플랫화이트", "콤부차", "히비스커스티", "페퍼민트티", "메론소다", "식혜", "청포도에이드"],
-    "주류": ["진토닉", "마티니", "네그로니", "김렛", "톰 콜린스", "싱가포르 슬링", "하이볼", "올드 패션드", "맨해튼", "위스키 사워", "민트 줄렙", "갓파더", "모히토", "다이키리", "피냐 콜라다", "쿠바 리브레", "마이 타이", "모스크바 뮬", "코스모폴리탄", "블랙 러시안", "화이트 러시안", "에스프레소 마티니", "복분자", "블러디 메리", "마가리타", "데킬라 선라이즈", "팔로마", "사이드카", "미도리 사워", "피치 크러쉬"],
-    "기타": "ETC_MODE"
+    "주류": ["진토닉", "마티니", "네그로니", "김렛", "톰 콜린스", "싱가포르 슬링", "하이볼", "올드 패션드", "맨해튼", "위스키 사워", "민트 줄렙", "갓파더", "모히토", "다이키리", "피냐 콜라다", "쿠바 리브레", "마이 타이", "모스크바 뮬", "코스모폴리탄", "블랙 러시안", "화이트 러시안", "에스프레소 마티니", "복분자", "블러디 메리", "마가리타", "데킬라 선라이즈", "팔로마", "사이드카", "미도리 사워", "피치 크러쉬"]
 }
 
 # 수동 레시피 (API 사용 안 함 - 30가지 풀버전)
@@ -966,12 +942,6 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "sel_cat" not in st.session_state: st.session_state.sel_cat = None
 if "show_retry" not in st.session_state: st.session_state.show_retry = False
 if "finished_msg" not in st.session_state: st.session_state.finished_msg = False
-
-# 3. AI 모델 엔진 로직 (라이브러리 우회 - 직접 통신 방식)
-def get_ai_response(prompt_text):
-    api_key = st.secrets["GEMINI_API_KEY"]
-    # 구글 라이브러리를 거치지 않고, 1.5-flash 모델 주소로 직접 쏩니다!
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     
     # 이전 대화 기록 구성
     contents = []
@@ -1052,16 +1022,7 @@ else:
         if m_cols[i % 5].button(cat, use_container_width=True, key=f"c_{cat}"):
             st.session_state.sel_cat = cat
 
-    # 기타 모드 입력칸
-    if st.session_state.sel_cat == "기타":
-        st.info("💡 **메뉴를 적어주세요.**")
-        with st.form("etc_form", clear_on_submit=True):
-            etc_dish = st.text_input("궁금한 음식 이름을 입력하세요:")
-            if st.form_submit_button("레시피 찾기") and etc_dish:
-                user_input_recipe = etc_dish # AI 답변 트리거
-
-    # 세부 메뉴 버튼
-    elif st.session_state.sel_cat:
+    if st.session_state.sel_cat:
         st.info(f"✨ **{st.session_state.sel_cat}** 메뉴판입니다.")
         s_cols = st.columns(5)
         for i, dish in enumerate(MENU_DATA[st.session_state.sel_cat]):
@@ -1069,34 +1030,19 @@ else:
                 user_input_recipe = dish
 
 # ---------------------------------------------------------------------
-# 6. 레시피 생성 및 출력 실행
+# 6. 레시피 생성 및 출력 실행 (AI 제거, 수동 데이터 전용)
 # ---------------------------------------------------------------------
 if user_input_recipe:
     # 1. 사용자 질문 기록
     st.session_state.messages.append({"role": "user", "content": f"{user_input_recipe} 레시피 알려줘"})
     
-    # 2. 로직 분기: 수동 레시피에 있는지 확인
+    # 2. 수동 레시피에 있는지 확인하고 출력
     if user_input_recipe in MANUAL_RECIPES:
         ans = MANUAL_RECIPES[user_input_recipe]
-        st.session_state.messages.append({"role": "assistant", "content": ans})
-        st.session_state.show_retry = True
-        st.rerun()
     else:
-        # 3. AI 답변 생성 (한식, 기타 메뉴 등)
-        with st.chat_message("assistant"):
-            placeholder = st.empty()
-            full_res = ""
-            chef_prompt = f"너는 세계 최고의 AI 쉐프야. 사용자가 '{user_input_recipe}'를 요청했어. 상세 레시피를 [필요한 재료], [조리 순서], [AI 쉐프의 꿀팁]으로 정리해줘."
-            stream = get_ai_response(chef_prompt)
-            if stream:
-                for chunk in stream:
-                    if chunk.text:
-                        full_res += chunk.text
-                        placeholder.markdown(full_res)
-                st.session_state.messages.append({"role": "assistant", "content": full_res})
-                st.session_state.show_retry = True
-                st.rerun()
-            else:
-                # 💡 모든 모델 폴백이 실패했을 때 사용자에게 보여줄 메시지 처리
-                st.session_state.messages.pop() # 에러 났으니 방금 들어간 질문은 세션에서 빼줌
-                st.error("🚨 앗! 오늘 준비된 AI 쉐프의 일일 사용량을 모두 소진했습니다! 내일 다시 찾아주세요. 👨‍🍳")
+        # 혹시 버튼에는 있는데 수동 레시피 딕셔너리에 내용이 빠져있을 경우를 대비한 방어 코드
+        ans = f"앗! '{user_input_recipe}' 레시피는 아직 준비 중입니다. 👨‍🍳"
+        
+    st.session_state.messages.append({"role": "assistant", "content": ans})
+    st.session_state.show_retry = True
+    st.rerun()
