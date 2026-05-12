@@ -1033,7 +1033,7 @@ else:
             if s_cols[i % 5].button(dish, use_container_width=True, key=f"d_{dish}"):
                 user_input_recipe = dish
 
-    # 💡 사진에 동그라미 친 위치에 들어갈 코드입니다! (여기에 추가)
+    # 💡 동그라미 친 위치에 들어가는 추천 코드 (여기에 딱 맞게 들어갑니다!)
     st.write("---")
     st.write("#### 🎲 메뉴를 추천해드릴까요?")
     rc1, rc2, rc3 = st.columns(3)
