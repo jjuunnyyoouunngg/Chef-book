@@ -976,6 +976,7 @@ elif st.session_state.show_retry:
     st.write("#### 🤔 더 물어볼 메뉴가 있나요?")
     c1, c2, _ = st.columns([1, 1, 8])
     if c1.button("✅ 예", use_container_width=True):
+        st.session_state.messages = []
         st.session_state.show_retry = False
         st.session_state.sel_cat = None
         st.rerun()
@@ -1000,7 +1001,7 @@ else:
                 user_input_recipe = dish
 
 # ---------------------------------------------------------------------
-# 6. 레시피 생성 및 출력 실행 (AI 제거, 수동 데이터 전용)
+# 6. 레시피 생성 및 출력 실행
 # ---------------------------------------------------------------------
 if user_input_recipe:
     st.session_state.messages = []
