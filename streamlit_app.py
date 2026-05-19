@@ -1421,3 +1421,59 @@ else:
             if st.button("다시 추천받기 🔄"):
                 st.session_state.rec_step = 0
                 st.rerun()
+
+# ---------------------------------------------------------------------
+
+# 6. 레시피 생성 및 출력 실행
+
+# ---------------------------------------------------------------------
+
+if user_input_recipe:
+
+    st.session_state.messages = []
+
+    
+
+    # 💡 추천 모드인지 직접 선택 모드인지에 따라 질문과 앞부분 멘트를 다르게 설정
+
+    if st.session_state.is_recom:
+
+        user_msg = "조건에 맞는 메뉴를 추천해줘!"
+
+        prefix = f"🎉 추천하는 메뉴는 **'{user_input_recipe}'** 입니다!\n\n"
+
+        st.session_state.is_recom = False  # 다음 사용을 위해 다시 꺼줌
+
+    else:
+
+        user_msg = f"'{user_input_recipe}' 레시피 알려줘"
+
+        prefix = ""
+
+        
+
+    # 1. 사용자 질문 기록
+
+    st.session_state.messages.append({"role": "user", "content": user_msg})
+
+    
+
+    # 2. 수동 레시피에 있는지 확인하고 출력
+
+    if user_input_recipe in MANUAL_RECIPES:
+
+        ans = prefix + MANUAL_RECIPES[user_input_recipe]
+
+    else:
+
+        # 혹시 버튼에는 있는데 수동 레시피 딕셔너리에 내용이 빠져있을 경우를 대비한 방어 코드
+
+        ans = prefix + f"앗! '{user_input_recipe}' 레시피는 아직 준비 중입니다. 👨‍🍳"
+
+        
+
+    st.session_state.messages.append({"role": "assistant", "content": ans})
+
+    st.session_state.show_retry = True
+
+    st.rerun()
